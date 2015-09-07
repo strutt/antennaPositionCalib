@@ -71,7 +71,7 @@ endif
 
 OBJS = 
 
-BINARIES = makePeakCrossCorrTree
+BINARIES = findWaisPulserEvents generateDeltaTTree
 
 #Now the bits we're actually compiling
 all: $(OBJS) $(BINARIES) commit
