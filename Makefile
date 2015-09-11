@@ -71,7 +71,7 @@ endif
 
 OBJS = 
 
-BINARIES = findWaisPulserEvents generateDeltaTTree
+BINARIES = findWaisPulserEvents generateDeltaTTree generateDeltaTLookupHistograms compareMeasuredWithExpectedDeltaTs
 
 #Now the bits we're actually compiling
 all: $(OBJS) $(BINARIES) commit

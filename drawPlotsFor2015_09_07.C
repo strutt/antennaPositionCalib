@@ -1,8 +1,16 @@
 {
 
 
-  TFile* f = TFile::Open("generateDeltaTTreePlots.root");
-  TTree* t = (TTree*) f->Get("deltaTTree");
+  TChain* t = new TChain("deltaTTree");
+  const Int_t firstRun = 331;
+  const Int_t lastRun = 354;
+  for(Int_t run=firstRun; run<=lastRun; run++){
+    TString fileName = TString::Format("generateDeltaTTree_run%d-%dPlots.root", run, run);
+    t->Add(fileName);
+  }
+  
+  // TFile* f = TFile::Open("generateDeltaTTreePlots.root");
+  // TTree* t = (TTree*) f->Get("deltaTTree");
   Bool_t savePlots = kFALSE;
   // Bool_t savePlots = kTRUE;  
   // return;
@@ -20,6 +28,9 @@
   phiExpected = phiExpected > 360 - 11.25 ? phiExpected - 360 : phiExpected;
 
 
+  const Double_t deltaPhiMax = 45;
+  const Double_t deltaPhiMin = -deltaPhiMax;
+  
   Double_t length = 5;
   TLine *l1 = new TLine(phiExpected, -75,
   			phiExpected,75);
@@ -36,12 +47,16 @@
   			    1024, -75, -75);
   hDeltaTs->GetXaxis()->SetTitle("Correlation #Deltat (ns)");
   hDeltaTs->GetYaxis()->SetTitle("Number of events");  
-  t->Draw("correlationDeltaTs[0][6]>>hDeltaTs", "TMath::Abs(deltaPhiDeg[0])<22.5", "goff");
+  // t->Draw("correlationDeltaTs[0][6]>>hDeltaTs", "TMath::Abs(deltaPhiDeg[0])<22.5", "goff");
+  t->Draw("correlationDeltaTs[0][6]>>hDeltaTs",
+	  TString::Format("TMath::Abs(deltaPhiDeg[0])<%lf", deltaPhiMax),
+	  "goff");  
   TCanvas* c1 = new TCanvas();
   hDeltaTs->Draw();
   c1->SetLogy(1);
   if(savePlots){
-    RootTools::saveCanvas(c1, "~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_waisSelection_run352_ants_0_16");
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_waisSelection_runs%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c1, fileName);
   }
 
   
@@ -51,44 +66,85 @@
   hDeltaTsZoom->GetXaxis()->SetRangeUser(-3, 12);
   c2->SetLogy(1);
   if(savePlots){
-    RootTools::saveCanvas(c2, "~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_zoom_waisSelection_run352_ants_0_16");
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_zoom_waisSelection_run%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c2, fileName);
   }
+  
+  return;
+
+  TH2D* hDeltaTsVsCorr = new TH2D("hDeltaTsVsCorr",
+				  "#Deltat of maximum correlation between antennas 0 and 16 vs correlation",
+				  128, 0, 1, 1024, -75, -75);
+  hDeltaTsVsCorr->GetYaxis()->SetTitle("Correlation #Deltat (ns)");
+  hDeltaTsVsCorr->GetXaxis()->SetTitle("Correlation at peak #deltat (no units)");
+
+  TCanvas* c2a = new TCanvas();
+  t->Draw("correlationDeltaTs[0][6]:correlationValues[0][6]>>hDeltaTsVsCorr",
+	  TString::Format("TMath::Abs(deltaPhiDeg[0])<%lf", deltaPhiMax),
+	  "goff");
+  hDeltaTsVsCorr->Draw("colz");
+
+  TH2D* hDeltaTsVsCorrZoom = (TH2D*) hDeltaTsVsCorr->Clone();
+  hDeltaTsVsCorr->RebinY(8);
+  
+  if(savePlots){
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_corrVal_waisSelection_run%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c2a, fileName);
+  }
+  TCanvas* c2b = new TCanvas();
+  hDeltaTsVsCorrZoom->GetYaxis()->SetRangeUser(1, 9);
+  hDeltaTsVsCorrZoom->Draw("colz");
+  if(savePlots){
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_corrVal_zoom_waisSelection_run%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c2b, fileName);
+  }
+
+
+
+
   
   
 
   TH2D* hDeltaTsVsPhi = new TH2D("hDeltaTsVsPhi",
 			    "#Deltat of maximum correlation between antennas 0 and 16 vs #delta#phi",
-  			    100, -22.5, 22.5, 1024, -75, -75);
+  			    100, deltaPhiMin, deltaPhiMax, 1024, -75, -75);
   hDeltaTsVsPhi->GetYaxis()->SetTitle("Correlation #Deltat (ns)");
   hDeltaTsVsPhi->GetXaxis()->SetTitle("#phi_{expected} - #phi_{phi-sector} (degrees)");
 
   TCanvas* c3 = new TCanvas();
-  t->Draw("correlationDeltaTs[0][6]:deltaPhiDeg[0]>>hDeltaTsVsPhi", "TMath::Abs(deltaPhiDeg[0])<22.5", "goff");
+  t->Draw("correlationDeltaTs[0][6]:deltaPhiDeg[0]>>hDeltaTsVsPhi",
+	  TString::Format("TMath::Abs(deltaPhiDeg[0])<%lf", deltaPhiMax),
+	  "goff");
   hDeltaTsVsPhi->Draw("colz");
   hDeltaTsVsPhi->GetYaxis()->SetRangeUser(1, 9);
   // c3->SetLogz(1);
   if(savePlots){
-    RootTools::saveCanvas(c3, "~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_deltaPhi_waisSelection_run352_ants_0_16");
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_deltaPhi_waisSelection_run%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c3, fileName);
   }
 
 
   TH2D* hDeltaTsVsTheta = new TH2D("hDeltaTsVsTheta",
 			    "#Deltat of maximum correlation between antennas 0 and 16 vs #theta_{expected}",
-  			    100, -22.5, 22.5, 1024, -75, -75);
+  			    100, deltaPhiMin, deltaPhiMax, 1024, -75, -75);
   hDeltaTsVsTheta->GetYaxis()->SetTitle("Correlation #Deltat (ns)");
   hDeltaTsVsTheta->GetXaxis()->SetTitle("#theta_{expected} (degrees)");
 
   TCanvas* c4 = new TCanvas();
-  t->Draw("correlationDeltaTs[0][6]:thetaExpected>>hDeltaTsVsTheta", "TMath::Abs(deltaPhiDeg[0])<22.5", "goff");
+  t->Draw("correlationDeltaTs[0][6]:thetaExpected>>hDeltaTsVsTheta",
+	  TString::Format("TMath::Abs(deltaPhiDeg[0])<%lf", deltaPhiMax),
+	  "goff");
   hDeltaTsVsTheta->Draw("colz");
   hDeltaTsVsTheta->GetYaxis()->SetRangeUser(1, 9);
   // c3->SetLogz(1);
   if(savePlots){
-    RootTools::saveCanvas(c4, "~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_thetaExpected_waisSelection_run352_ants_0_16");
+    TString fileName = TString::Format("~/UCL/ANITA/weeklyMeeting/2015_09_07/maxCorrDt_vs_thetaExpected_waisSelection_run%d-%d_ants_0_16", firstRun, lastRun);
+    RootTools::saveCanvas(c4, fileName);
   }
 
 
-
+  return;
+  
 
   TString calEventFilePath = "~/UCL/ANITA/calibratedFlight1415/run352/calEventFile352.root";
   TFile* fE = TFile::Open(calEventFilePath);

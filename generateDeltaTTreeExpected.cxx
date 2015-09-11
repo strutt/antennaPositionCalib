@@ -4,8 +4,21 @@
  Email: b.strutt.12@ucl.ac.uk
 
  Description:
-             Program to find peak cross correlation offsets between antenna pairs in pulses from Wais Divide.
+             Want this program to do three things.
+             1.) make deltaTs expected for Prioritizerd antenna positions (i.e. feed positions)
+             2.) make deltaTs expected for photogrammetry antenna positions from Linda et. al.
+             3.) Somehow find the "best fit" antenna positions given the set of deltaTs for the event.
+                 How to do 3?
 *************************************************************************************************************** */
+
+
+////////////////
+// Have many, many deltaTs and only a few antenna positions. (But highly correlated information)
+// Really only have signal arrival time of each channel... i.e. 48 ts.
+// All deltaTs are differences between these numbers...
+// 
+/////////////
+
 
 #include <TFile.h>
 #include <TChain.h>
@@ -36,12 +49,10 @@ int main(int argc, char *argv[])
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
   const Double_t maxDeltaTriggerTimeNs = 1200;
-
   
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
-
 
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
@@ -51,13 +62,9 @@ int main(int argc, char *argv[])
     fileName = TString::Format("~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
   }
-  RawAnitaHeader* header = NULL;
-  headChain->SetBranchAddress("header", &header);  
   Adu5Pat* pat = NULL;
   gpsChain->SetBranchAddress("pat", &pat);
-  gpsChain->BuildIndex("realTime");  
-  CalibratedAnitaEvent* calEvent = NULL;
-  calEventChain->SetBranchAddress("event", &calEvent);
+  gpsChain->BuildIndex("realTime");
   
   Long64_t nEntries = headChain->GetEntries();
   Long64_t maxEntry = 0; //3000;
@@ -66,13 +73,13 @@ int main(int argc, char *argv[])
   ProgressBar p(maxEntry);
 
   const Double_t maxDistKm = 2e3;
-  const Int_t numDistBins = 2000;  
+  const Int_t numDistBins = 2000;
   TString outFileName = TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
-  TFile* outFile = new TFile(outFileName, "recreate");    
-  TString title1 = TString::Format("Distance from WAIS divide runs %d - %d; run; Distance (km)", firstRun, lastRun);
+  TFile* outFile = new TFile(outFileName, "recreate");
+  TString title1 = TString::Format("Distance from WAIS divide runs %d - %d; run; Distance (km)",
+				   firstRun, lastRun);
   TH2D* hDistanceFromWais = new TH2D("hDistanceFromWais", title1,
 				     lastRun+1-firstRun, firstRun, lastRun+1, numDistBins, 0, maxDistKm);
-
 
   const Double_t minDiff = -2e3;
   const Double_t maxDiff = 2e3;
@@ -107,7 +114,6 @@ int main(int argc, char *argv[])
   // (*thetaExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   // (*phiExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   (*deltaPhiDeg) = std::vector<Double_t>(NUM_SEAVEYS, 0);  
-  
   
   for(Long64_t entry = 0; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
