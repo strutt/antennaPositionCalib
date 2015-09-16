@@ -155,8 +155,8 @@
   tE->GetEntryWithIndex(eventNumber);
   UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(calEvent);
 
-  CrossCorrelator cc(32);
-  // CrossCorrelator cc(1);  
+  // CrossCorrelator cc(32);
+  CrossCorrelator cc;  
   // cc.getNormalizedInterpolatedTGraphs(realEvent);
   cc.correlateEvent(realEvent);
 

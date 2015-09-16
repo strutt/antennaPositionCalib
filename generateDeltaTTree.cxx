@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
   const Double_t maxDeltaTriggerTimeNs = 1200;
 
-  
+
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     headChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);
     gpsChain->Add(fileName);
-    fileName = TString::Format("~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
   }
   RawAnitaHeader* header = NULL;
@@ -89,25 +89,26 @@ int main(int argc, char *argv[])
   UInt_t triggerTimeNs;
   UInt_t triggerTimeNsExpected;    
   std::vector<std::vector<Double_t> >* correlationDeltaTs = NULL;
-  std::vector<std::vector<Double_t> >* correlationValues = NULL;  
+  std::vector<std::vector<Double_t> >* correlationValues = NULL;
   std::vector<Double_t> * deltaPhiDeg = NULL;
   deltaTTree->Branch("eventNumber", &eventNumber);
   deltaTTree->Branch("correlationDeltaTs", &correlationDeltaTs);
-  deltaTTree->Branch("correlationValues", &correlationValues);  
+  deltaTTree->Branch("correlationValues", &correlationValues);
   deltaTTree->Branch("thetaExpected", &thetaExpected);
   deltaTTree->Branch("phiExpected", &phiExpected);
-  deltaTTree->Branch("deltaPhiDeg", &deltaPhiDeg);  
+  deltaTTree->Branch("deltaPhiDeg", &deltaPhiDeg);
   deltaTTree->Branch("heading", &heading);
   deltaTTree->Branch("triggerTimeNs", &triggerTimeNs);
-  deltaTTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);  
+  deltaTTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   
   Int_t upsampleFactor = 32;
   CrossCorrelator* cc = new CrossCorrelator(upsampleFactor);
+
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
   
   // (*thetaExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   // (*phiExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
-  (*deltaPhiDeg) = std::vector<Double_t>(NUM_SEAVEYS, 0);  
-  
+  (*deltaPhiDeg) = std::vector<Double_t>(NUM_SEAVEYS, 0);
   
   for(Long64_t entry = 0; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
@@ -118,7 +119,6 @@ int main(int argc, char *argv[])
       triggerTimeNs = header->triggerTimeNs;
       Int_t deltaTriggerTimeNs = Int_t(triggerTimeNs) - Int_t(triggerTimeNsExpected);
       if(TMath::Abs(deltaTriggerTimeNs) < maxDeltaTriggerTimeNs){
-
 	eventNumber = header->eventNumber;
 	Double_t distKm = triggerTimeNsExpected*1e-9*C_LIGHT/1e3;
 	hDistanceFromWais->Fill(header->run, distKm);
@@ -129,18 +129,21 @@ int main(int argc, char *argv[])
 	
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
 
-	usefulPat.getThetaAndPhiWaveAnita3WaisDivide(thetaExpected, phiExpected);
+	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=TMath::RadToDeg();
+	thetaExpected*=-1*TMath::RadToDeg();
 
 	for(int ant=0; ant<NUM_SEAVEYS; ant++){
-	  deltaPhiDeg->at(ant) = RootTools::getDeltaAngleDeg(phiExpected, cc->phiArrayDeg[ant]);
+	  Double_t antPhiDeg = geom->getAntPhiPositionRelToAftFore(ant)*TMath::RadToDeg();
+	  deltaPhiDeg->at(ant) = RootTools::getDeltaAngleDeg(phiExpected, antPhiDeg);
+
+	  
 	}
 
 	cc->correlateEvent(usefulEvent);
 
 	(*correlationDeltaTs) = cc->getMaxCorrelationTimes();
-	(*correlationValues) = cc->getMaxCorrelationValues();	
+	(*correlationValues) = cc->getMaxCorrelationValues();
 
 	if(eventNumber==60832576){
 	  TGraph* gr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 16);
