@@ -28,7 +28,7 @@
 #include <ProgressBar.h>
 #include <CrossCorrelator.h>
 
-const Int_t numCombos = 1; //NUM_PHI;
+const Int_t numCombos = NUM_PHI;
 TProfile2D* profs[numCombos];
 AnitaGeomTool* geom;
 UsefulAdu5Pat emptyPat;
@@ -38,6 +38,8 @@ std::vector<Double_t> phiArray;
 std::vector<Int_t> combos;
 std::vector<Int_t> ant1s;
 std::vector<Int_t> ant2s;
+const Int_t numVars = NUM_PHI;
+
 
 Double_t sumOverSquaredDifferences(const Double_t* allTheVars);
 void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended, TString titleAppended);
@@ -82,63 +84,73 @@ int main(int argc, char *argv[])
     // 	      << "\t" << phiArray.at(ant)*TMath::RadToDeg() << std::endl;
   }
 
-  const Int_t numDefaults = 2;
+  // const Int_t numDefaults = 2;
 
-  TH2D* hDtExpected2D[numDefaults] = {NULL};
-  TH1D* hDiff[numDefaults] = {NULL};
+  // TH2D* hDiff2D[numDefaults] = {NULL};
+  // TH1D* hDiff[numDefaults] = {NULL};
 
-  geom->fUseKurtAnitaIIINumbers = 0;
-  makeHistosFromGeom(0, hDiff[0], hDtExpected2D[0], "feed", " for feed locations");
-  Double_t zeros1[1] = {0};
-  std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
-  geom->fUseKurtAnitaIIINumbers = 1;
-  makeHistosFromGeom(0, hDiff[1], hDtExpected2D[1], "photo", " for photogrammetry numbers");
-  std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
+  // geom->fUseKurtAnitaIIINumbers = 0;
+  // makeHistosFromGeom(0, hDiff[0], hDiff2D[0], "feed", " for feed locations");
+  // Double_t zeros1[1] = {0};
+  // std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
+  // geom->fUseKurtAnitaIIINumbers = 1;
+  // makeHistosFromGeom(0, hDiff[1], hDiff2D[1], "photo", " for photogrammetry numbers");
+  // std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
   
-  std::vector<Double_t> rSteps;
-  std::vector<Double_t> sumOverSquares;
-  Double_t myStepSize = 0.002;
+  // std::vector<Double_t> rSteps;
+  // std::vector<Double_t> sumOverSquares;
+  // Double_t myStepSize = 0.002;
 
-  Double_t minResidual = DBL_MAX;
-  Int_t bestRInd = 0;
-  const Int_t numDeltaRInds = 50;
+  // Double_t minResidual = DBL_MAX;
+  // Int_t bestRInd = 0;
+  // const Int_t numDeltaRInds = 50;
   
-  for(int deltaRInd=0; deltaRInd < numDeltaRInds; deltaRInd++){
-    // Double_t deltaR = 0.1*deltaRInd - 0.4;
-    Double_t rStep = (myStepSize*deltaRInd - 0.2*myStepSize*numDeltaRInds);
+  // for(int deltaRInd=0; deltaRInd < numDeltaRInds; deltaRInd++){
+  //   // Double_t deltaR = 0.1*deltaRInd - 0.4;
+  //   Double_t rStep = (myStepSize*deltaRInd - 0.2*myStepSize*numDeltaRInds);
 
-    
-    Double_t ddt2 = sumOverSquaredDifferences(&rStep);
+  //   Double_t ddt2 = sumOverSquaredDifferences(&rStep);
 
-    if(ddt2 < minResidual){
-      bestRInd = deltaRInd;
-      minResidual = ddt2;
-    }
+  //   if(ddt2 < minResidual){
+  //     bestRInd = deltaRInd;
+  //     minResidual = ddt2;
+  //   }
 
-    // std::cout << geom << std::endl;
-    // std::cout << rStep << "\t" << ddt2 << std::endl;
-    rSteps.push_back(rStep);
-    sumOverSquares.push_back(ddt2);
-  }
+  //   // std::cout << geom << std::endl;
+  //   // std::cout << rStep << "\t" << ddt2 << std::endl;
+  //   rSteps.push_back(rStep);
+  //   sumOverSquares.push_back(ddt2);
+  // }
 
-  // makeHistosFromGeom(deltaRInd+2, hDiff[deltaRInd+2], hDtExpected2D[deltaRInd+2]);
-  // makeHistosFromGeom(bestRInd+2, hDiff[bestRInd+2], hDtExpected2D[bestRInd+2]);
+  // // makeHistosFromGeom(deltaRInd+2, hDiff[deltaRInd+2], hDiff2D[deltaRInd+2]);
+  // // makeHistosFromGeom(bestRInd+2, hDiff[bestRInd+2], hDiff2D[bestRInd+2]);
 
   
-  TGraph* gr = new TGraph(rSteps.size(), &rSteps[0], &sumOverSquares[0]);
-  gr->SetName("grDeltaRScan");
-  gr->SetTitle("<#Deltat> for antennas 0 and 16; #deltar_{16} relative to photogrammetry positions (m); <#Deltat> (ns)");
-  gr->Write();
+  // TGraph* gr = new TGraph(rSteps.size(), &rSteps[0], &sumOverSquares[0]);
+  // gr->SetName("grDeltaRScan");
+  // gr->SetTitle("<#Deltat> for antennas 0 and 16; #deltar_{16} relative to photogrammetry positions (m); <#Deltat> (ns)");
+  // gr->Write();
+
+
+
+
+
+
+  
+
+
+
+
   
   // Right, now let's try to minimize this bastard...
   // Mostly copied from the ROOT Minuit tutorial 
-  const Int_t numVars = 1;
+
   ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
   // set tolerance , etc...
-  min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
-  min->SetMaxIterations(10000);  // for GSL 
-  min->SetTolerance(0.0001);
-  min->SetPrintLevel(1);
+   min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
+   min->SetMaxIterations(10000);  // for GSL
+   min->SetTolerance(0.0001);
+   min->SetPrintLevel(1);
 
   // create funciton wrapper for minmizer
   // a IMultiGenFunction type 
@@ -150,27 +162,36 @@ int main(int argc, char *argv[])
   // starting point
   std::vector<Double_t> variables = std::vector<Double_t> (numVars, 0);
 
-  variables.at(0) = 0; 
-
   min->SetFunction(funcToMin);
 
   // Set the free variables to be minimized!
   // min->SetLimitedVariable(0, "deltaR", variables[0], step[0], 0, 10);
-  min->SetVariable(0, "deltaR", variables[0], step[0]);
-  // min->SetVariable(1, "r2", variables[1], step[1]);
-  // min->SetVariable(2, "z1", variables[2], step[2]);
-  // min->SetVariable(3, "z2", variables[3], step[3]);
-  // min->SetVariable(4, "phi1", variables[4], step[4]);
-  // min->SetVariable(5, "phi2", variables[5], step[5]);
 
-  // min->FixVariable(2);
-  // min->FixVariable(3);  
-  // min->FixVariable(4);
-  // min->FixVariable(5);  
-  
+  for(Int_t varInd=0; varInd < numVars; varInd++){
+    Int_t ant = NUM_PHI + varInd;
+    TString varName = TString::Format("deltaR_%d", ant);
+    variables.at(varInd) = rArray.at(ant);
+    min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
+  }
+
+  // Time it
+  TStopwatch watch;
+  watch.Start(kTRUE);
+
   // do the minimization
   min->Minimize(); 
- 
+
+  // Time!
+  watch.Start(kFALSE);
+  Int_t seconds = Int_t(watch.RealTime());
+  Int_t hours = seconds / 3600;
+  hours = hours < 0 ? 0 : hours;
+  seconds = seconds - hours * 3600;
+  Int_t mins = seconds / 60;
+  mins = mins < 0 ? 0 : mins;
+  seconds = seconds - mins * 60;  
+  fprintf(stderr, "Minimization took %02d:%02d:%02d\n", hours, mins, seconds);
+  
   const double *xs = min->X();
   std::cout << "Minimum = " << min->MinValue() << std::endl;
   std::cout << "Minimum: f(" << xs[0] << ") = " << min->MinValue()  << std::endl;
@@ -179,6 +200,10 @@ int main(int argc, char *argv[])
   grFitterMin->SetPoint(0, xs[0], min->MinValue());
   grFitterMin->SetName("grFitterMin");
   grFitterMin->Write();
+
+
+  
+
   
   outFile->Write();
   outFile->Close();
@@ -198,19 +223,17 @@ Double_t sumOverSquaredDifferences(const Double_t* deltaR){
   Double_t sumOfSquareDifferences = 0;
   Int_t count = 0;
 
-  // for(int ant=0; ant<NUM_SEAVEYS; ant++){
-  //   if(ant==0) continue;
-  //   geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[ant];
-  // }
-  Int_t ant = ant2s.at(0);
-  geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[0];
+  for(int varInd=0; varInd<numVars; varInd++){
+    Int_t ant = varInd + NUM_PHI;
+    geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[varInd];
+  }
   
   for(int comboInd=0; comboInd<numCombos; comboInd++){
     Double_t halfThetaBinWidth = 0.5*(profs[comboInd]->GetYaxis()->GetBinLowEdge(2) - profs[comboInd]->GetYaxis()->GetBinLowEdge(1));
     Double_t halfPhiBinWidth = 0.5*(profs[comboInd]->GetXaxis()->GetBinLowEdge(2) - profs[comboInd]->GetXaxis()->GetBinLowEdge(1));
 
     Int_t ant1 = ant1s.at(comboInd);
-    Int_t ant2 = ant2s.at(comboInd);    
+    Int_t ant2 = ant2s.at(comboInd);
     
     for(Int_t binx=1; binx<=profs[comboInd]->GetXaxis()->GetNbins(); binx++){
       Double_t phi = profs[comboInd]->GetXaxis()->GetBinLowEdge(binx) + halfPhiBinWidth;
@@ -287,8 +310,8 @@ void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended
 	// std::cout << dt_e << "\t" << dt_m << std::endl;
 	h1->Fill(dt_e-dt_m);
 
-	h2->SetBinContent(binx, biny, dt_e);
-	// h2->SetBinContent(binx, biny, dt_e-dt_m);	
+	// h2->SetBinContent(binx, biny, dt_e);
+	h2->SetBinContent(binx, biny, dt_e-dt_m);	
       }
     }
   }

@@ -46,7 +46,6 @@
   // TString titles[2] = {"Feed locations", "Photogrammetry locations"};
   // TLegend* l3 = RootTools::makeLegend(hs, 2, titles, "l", 0.6, 0.65, 0.95, 0.85);
   // l3->Draw();
-  
 
 
   TCanvas* c4 = new TCanvas();
