@@ -73,43 +73,42 @@ int main(int argc, char *argv[])
 
 
   geom = AnitaGeomTool::Instance();
+  geom->fUseKurtAnitaIIINumbers = 1;  
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray.push_back(geom->getAntR(ant));
     zArray.push_back(geom->getAntZ(ant));
     phiArray.push_back(geom->getAntPhiPositionRelToAftFore(ant));
+    // std::cout << ant << "\t" << rArray.at(ant) << "\t" << zArray.at(ant)
+    // 	      << "\t" << phiArray.at(ant)*TMath::RadToDeg() << std::endl;
   }
 
-  const Int_t numDeltaRInds = 40;
   const Int_t numDefaults = 2;
 
-  TH2D* hDiff2D[numDefaults] = {NULL};
+  TH2D* hDtExpected2D[numDefaults] = {NULL};
   TH1D* hDiff[numDefaults] = {NULL};
 
   geom->fUseKurtAnitaIIINumbers = 0;
-  makeHistosFromGeom(0, hDiff[0], hDiff2D[0], "feed", " for feed locations");
+  makeHistosFromGeom(0, hDiff[0], hDtExpected2D[0], "feed", " for feed locations");
   Double_t zeros1[1] = {0};
   std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
   geom->fUseKurtAnitaIIINumbers = 1;
-  makeHistosFromGeom(0, hDiff[1], hDiff2D[1], "photo", " for photogrammetry numbers");
+  makeHistosFromGeom(0, hDiff[1], hDtExpected2D[1], "photo", " for photogrammetry numbers");
   std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
   
-  std::vector<Double_t> facts;
+  std::vector<Double_t> rSteps;
   std::vector<Double_t> sumOverSquares;
   Double_t myStepSize = 0.002;
 
   Double_t minResidual = DBL_MAX;
   Int_t bestRInd = 0;
+  const Int_t numDeltaRInds = 50;
   
   for(int deltaRInd=0; deltaRInd < numDeltaRInds; deltaRInd++){
     // Double_t deltaR = 0.1*deltaRInd - 0.4;
-    Double_t fact = 1 + (myStepSize*deltaRInd - 0.5*myStepSize*numDeltaRInds);
+    Double_t rStep = (myStepSize*deltaRInd - 0.2*myStepSize*numDeltaRInds);
 
-    for(int ant=0; ant<NUM_SEAVEYS; ant++){
-      geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)*fact;
-    }
     
-    Double_t zeros[1] = {0};
-    Double_t ddt2 = sumOverSquaredDifferences(zeros);
+    Double_t ddt2 = sumOverSquaredDifferences(&rStep);
 
     if(ddt2 < minResidual){
       bestRInd = deltaRInd;
@@ -117,79 +116,70 @@ int main(int argc, char *argv[])
     }
 
     // std::cout << geom << std::endl;
-    // std::cout << fact << "\t" << ddt2 << std::endl;
-    facts.push_back(fact);
+    // std::cout << rStep << "\t" << ddt2 << std::endl;
+    rSteps.push_back(rStep);
     sumOverSquares.push_back(ddt2);
   }
 
-  // makeHistosFromGeom(deltaRInd+2, hDiff[deltaRInd+2], hDiff2D[deltaRInd+2]);
-  // makeHistosFromGeom(bestRInd+2, hDiff[bestRInd+2], hDiff2D[bestRInd+2]);  
+  // makeHistosFromGeom(deltaRInd+2, hDiff[deltaRInd+2], hDtExpected2D[deltaRInd+2]);
+  // makeHistosFromGeom(bestRInd+2, hDiff[bestRInd+2], hDtExpected2D[bestRInd+2]);
+
   
-  TGraph* gr = new TGraph(facts.size(), &facts[0], &sumOverSquares[0]);
-  gr->SetName("grFacts");
-  gr->SetTitle("Mean (#deltat_{measured} - #deltat_{expected})^{2} for antennas 0 and 16; Radial scale factor relative to photogrammetry positions; Mean (#deltat_{measured} - #deltat_{expected})^{2} (ns^{2})");
+  TGraph* gr = new TGraph(rSteps.size(), &rSteps[0], &sumOverSquares[0]);
+  gr->SetName("grDeltaRScan");
+  gr->SetTitle("<#Deltat> for antennas 0 and 16; #deltar_{16} relative to photogrammetry positions (m); <#Deltat> (ns)");
   gr->Write();
   
-  // // Right, now let's try to minimize this bastard...
-  // // Mostly copied from the ROOT Minuit tutorial 
-  // const Int_t numVars = 1;
-  // ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
-  // // set tolerance , etc...
-  // min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
-  // min->SetMaxIterations(10000);  // for GSL 
-  // min->SetTolerance(0.0001);
-  // min->SetPrintLevel(1);
+  // Right, now let's try to minimize this bastard...
+  // Mostly copied from the ROOT Minuit tutorial 
+  const Int_t numVars = 1;
+  ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
+  // set tolerance , etc...
+  min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
+  min->SetMaxIterations(10000);  // for GSL 
+  min->SetTolerance(0.0001);
+  min->SetPrintLevel(1);
 
-  // // create funciton wrapper for minmizer
-  // // a IMultiGenFunction type 
-  // ROOT::Math::Functor funcToMin(&sumOverSquaredDifferences, numVars);
+  // create funciton wrapper for minmizer
+  // a IMultiGenFunction type 
+  ROOT::Math::Functor funcToMin(&sumOverSquaredDifferences, numVars);
 
-  // Double_t stepSize = 1e-3;
-  // std::vector<Double_t> step = std::vector<Double_t> (numVars, stepSize);
+  Double_t stepSize = 1e-3;
+  std::vector<Double_t> step = std::vector<Double_t> (numVars, stepSize);
 
-  // // starting point
-  // std::vector<Double_t> variables = std::vector<Double_t> (numVars, 0);
+  // starting point
+  std::vector<Double_t> variables = std::vector<Double_t> (numVars, 0);
 
-  // variables.at(0) = 0; 
-  // // variables.at(1) = geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical];
-  // // variables.at(2) = geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical];
-  // // variables.at(3) = geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical];
-  // // variables.at(4) = geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical];
-  // // variables.at(5) = geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical];
+  variables.at(0) = 0; 
 
-  // min->SetFunction(funcToMin);
+  min->SetFunction(funcToMin);
 
-  // // Set the free variables to be minimized!
-  // // min->SetLimitedVariable(0, "deltaR", variables[0], step[0], 0, 10);
-  // min->SetVariable(0, "deltaR", variables[0], step[0]);
-  // // min->SetVariable(1, "r2", variables[1], step[1]);
-  // // min->SetVariable(2, "z1", variables[2], step[2]);
-  // // min->SetVariable(3, "z2", variables[3], step[3]);
-  // // min->SetVariable(4, "phi1", variables[4], step[4]);
-  // // min->SetVariable(5, "phi2", variables[5], step[5]);
+  // Set the free variables to be minimized!
+  // min->SetLimitedVariable(0, "deltaR", variables[0], step[0], 0, 10);
+  min->SetVariable(0, "deltaR", variables[0], step[0]);
+  // min->SetVariable(1, "r2", variables[1], step[1]);
+  // min->SetVariable(2, "z1", variables[2], step[2]);
+  // min->SetVariable(3, "z2", variables[3], step[3]);
+  // min->SetVariable(4, "phi1", variables[4], step[4]);
+  // min->SetVariable(5, "phi2", variables[5], step[5]);
 
-  // // min->FixVariable(2);
-  // // min->FixVariable(3);  
-  // // min->FixVariable(4);
-  // // min->FixVariable(5);  
+  // min->FixVariable(2);
+  // min->FixVariable(3);  
+  // min->FixVariable(4);
+  // min->FixVariable(5);  
   
-  // // do the minimization
-  // min->Minimize(); 
+  // do the minimization
+  min->Minimize(); 
  
-  // const double *xs = min->X();
-  // std::cout << "Minimum = " << min->MinValue() << std::endl;
+  const double *xs = min->X();
+  std::cout << "Minimum = " << min->MinValue() << std::endl;
+  std::cout << "Minimum: f(" << xs[0] << ") = " << min->MinValue()  << std::endl;
 
-  // geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical] = rArray.at(ant1) + xs[0];
-  // geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = rArray.at(ant2) + xs[0];
+  TGraph* grFitterMin = new TGraph();
+  grFitterMin->SetPoint(0, xs[0], min->MinValue());
+  grFitterMin->SetName("grFitterMin");
+  grFitterMin->Write();
   
-  // // geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical] = xs[0];
-  // // geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical] = xs[2];
-  // // geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant1][AnitaPol::kVertical] = xs[4];
-
-  // // geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = xs[1];
-  // // geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = xs[3];
-  // // geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = xs[5];
-
   outFile->Write();
   outFile->Close();
 
@@ -203,10 +193,17 @@ int main(int argc, char *argv[])
 
 
 
-Double_t sumOverSquaredDifferences(const Double_t* allTheVars){
+Double_t sumOverSquaredDifferences(const Double_t* deltaR){
 
-  Double_t sumOfSquareDifferences = allTheVars[0] + 0;
+  Double_t sumOfSquareDifferences = 0;
   Int_t count = 0;
+
+  // for(int ant=0; ant<NUM_SEAVEYS; ant++){
+  //   if(ant==0) continue;
+  //   geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[ant];
+  // }
+  Int_t ant = ant2s.at(0);
+  geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[0];
   
   for(int comboInd=0; comboInd<numCombos; comboInd++){
     Double_t halfThetaBinWidth = 0.5*(profs[comboInd]->GetYaxis()->GetBinLowEdge(2) - profs[comboInd]->GetYaxis()->GetBinLowEdge(1));
@@ -231,7 +228,7 @@ Double_t sumOverSquaredDifferences(const Double_t* allTheVars){
       }
     }
   }
-  return sumOfSquareDifferences/count;
+  return TMath::Sqrt(sumOfSquareDifferences/count);
 }
 
 
@@ -265,10 +262,11 @@ void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended
   
   h1 = new TH1D(name, title, 32, -0.5, 0.5);
 
-  name = "hPureDiff_2D_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
+  name = "hDtExpected_2D_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
+  title = TString::Format("Predicted #deltats for antennas %d and %d", ant1, ant2);
   title += "; Azimuth (degrees)";
   title += "; Elevation (degrees)";  
-  
+  title += "; #delta t_{expected} (ns)";    
   
   h2 = new TH2D(name, title, 
 		numBinsPhi, phiDegMin, phiDegMax,
@@ -289,8 +287,8 @@ void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended
 	// std::cout << dt_e << "\t" << dt_m << std::endl;
 	h1->Fill(dt_e-dt_m);
 
-	// h2->SetBinContent(binx, biny, dt_e);
-	h2->SetBinContent(binx, biny, dt_e-dt_m);	
+	h2->SetBinContent(binx, biny, dt_e);
+	// h2->SetBinContent(binx, biny, dt_e-dt_m);	
       }
     }
   }
