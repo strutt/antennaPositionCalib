@@ -40,7 +40,7 @@ std::vector<Int_t> ant1s;
 std::vector<Int_t> ant2s;
 
 Double_t sumOverSquaredDifferences(const Double_t* allTheVars);
-void makeHistosFromGeom(Int_t geomIndex, TH1D*& h1, TH2D*& h2);
+void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended, TString titleAppended);
 
 int main(int argc, char *argv[])
 {
@@ -80,18 +80,21 @@ int main(int argc, char *argv[])
   }
 
   const Int_t numDeltaRInds = 40;
-  // const Int_t numDefaults = 3 + numDeltaRInds;
+  const Int_t numDefaults = 2;
 
-  // TH2D* hDiff2D[numDefaults] = {NULL};
-  // TH1D* hDiff[numDefaults] = {NULL};
+  TH2D* hDiff2D[numDefaults] = {NULL};
+  TH1D* hDiff[numDefaults] = {NULL};
 
-  // geom->fUseKurtAnitaIIINumbers = 0;
-  // makeHistosFromGeom(0, hDiff[0], hDiff2D[0]);
-  // geom->fUseKurtAnitaIIINumbers = 1;
-  // makeHistosFromGeom(1, hDiff[1], hDiff2D[1]);
-
+  geom->fUseKurtAnitaIIINumbers = 0;
+  makeHistosFromGeom(0, hDiff[0], hDiff2D[0], "feed", " for feed locations");
+  Double_t zeros1[1] = {0};
+  std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
+  geom->fUseKurtAnitaIIINumbers = 1;
+  makeHistosFromGeom(0, hDiff[1], hDiff2D[1], "photo", " for photogrammetry numbers");
+  std::cout << sumOverSquaredDifferences(zeros1) << std::endl;
+  
   std::vector<Double_t> facts;
-  std::vector<Double_t> sumOverSquares;  
+  std::vector<Double_t> sumOverSquares;
   Double_t myStepSize = 0.002;
 
   Double_t minResidual = DBL_MAX;
@@ -114,7 +117,7 @@ int main(int argc, char *argv[])
     }
 
     // std::cout << geom << std::endl;
-    std::cout << fact << "\t" << ddt2 << std::endl;
+    // std::cout << fact << "\t" << ddt2 << std::endl;
     facts.push_back(fact);
     sumOverSquares.push_back(ddt2);
   }
@@ -187,10 +190,6 @@ int main(int argc, char *argv[])
   // // geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = xs[3];
   // // geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant2][AnitaPol::kVertical] = xs[5];
 
-  // makeHistosFromGeom(numDefaults-1, hDiff[numDefaults-1], hDiff2D[numDefaults-1]);
-
-  // TProfile2D* hpMeas = (TProfile2D*) prof->Clone("hpMeas");
-  // hpMeas->SetTitle("#deltat_{measured}");  
   outFile->Write();
   outFile->Close();
 
@@ -237,61 +236,62 @@ Double_t sumOverSquaredDifferences(const Double_t* allTheVars){
 
 
 
-// void makeHistosFromGeom(Int_t defaultPosition, TH1D*& h1, TH2D*& h2){
+void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended, TString titleAppended){
 
-//   const Int_t numBinsPhi = prof->GetXaxis()->GetNbins();
-//   Double_t thetaDegMin = -50;
-//   Double_t thetaDegMax = 50;
-//   const Int_t numBinsTheta = prof->GetYaxis()->GetNbins();
-//   halfThetaBinWidth = 0.5*(prof->GetYaxis()->GetBinLowEdge(2) - prof->GetYaxis()->GetBinLowEdge(1));
-//   halfPhiBinWidth = 0.5*(prof->GetXaxis()->GetBinLowEdge(2) - prof->GetXaxis()->GetBinLowEdge(1));
-//   Double_t phiDegMin = 0;
-//   Double_t phiDegMax = 360;
+  const Int_t numBinsPhi = profs[comboInd]->GetXaxis()->GetNbins();
+  Double_t thetaDegMin = -50;
+  Double_t thetaDegMax = 50;
+  const Int_t numBinsTheta = profs[comboInd]->GetYaxis()->GetNbins();
+  Double_t halfThetaBinWidth = 0.5*(profs[comboInd]->GetYaxis()->GetBinLowEdge(2) - profs[comboInd]->GetYaxis()->GetBinLowEdge(1));
+  Double_t halfPhiBinWidth = 0.5*(profs[comboInd]->GetXaxis()->GetBinLowEdge(2) - profs[comboInd]->GetXaxis()->GetBinLowEdge(1));
+  Double_t phiDegMin = 0;
+  Double_t phiDegMax = 360;
 
+  Int_t ant1 = ant1s.at(comboInd);
+  Int_t ant2 = ant2s.at(comboInd);
   
-//   TString name = TString::Format("hPureDiff%d", defaultPosition);
-//   TString title = "Difference between measured and predicted #deltats";
-//   switch (defaultPosition){
-//   case 0:
-//     title += " for Feed locations";
-//     break;
-//   case 1:
-//     title += " for photogrammetry locations ";
-//     break;
-//   case 2:
-//     title += " for optimized locations ";
-//     break;
+  TString name = "hPureDiff_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
+  TString title = TString::Format("Difference between measured and predicted #deltats for antennas %d and %d", ant1, ant2);
+  title += titleAppended;
+  title += "; #deltat_{expected} - #deltat_{measured} (ns)";
+  title += "; Number of bins";
+
+  if(h1!=NULL){
+    delete h1;
+  }
+  if(h2!=NULL){
+    delete h2;
+  }
+  
+  h1 = new TH1D(name, title, 32, -0.5, 0.5);
+
+  name = "hPureDiff_2D_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
+  title += "; Azimuth (degrees)";
+  title += "; Elevation (degrees)";  
+  
+  
+  h2 = new TH2D(name, title, 
+		numBinsPhi, phiDegMin, phiDegMax,
+		numBinsTheta, thetaDegMin, thetaDegMax);
     
-//   default:
-//     // std::cerr << "Uh oh!" << std::endl;
-//     break;
-//   }
+  for(Int_t binx=1; binx<=profs[comboInd]->GetXaxis()->GetNbins(); binx++){
+    Double_t phi = profs[comboInd]->GetXaxis()->GetBinLowEdge(binx) + halfPhiBinWidth;
+    phi *= TMath::DegToRad();
+    for(Int_t biny=1; biny<=profs[comboInd]->GetYaxis()->GetNbins(); biny++){
+      if(profs[comboInd]->GetBinContent(binx, biny) != 0){
+	Double_t theta = profs[comboInd]->GetYaxis()->GetBinLowEdge(biny) + halfThetaBinWidth;
+	theta *= TMath::DegToRad();
 
-//   h1 = new TH1D(name, title, 32, -0.5, 0.5);
+	Double_t dt_e = emptyPat.getDeltaTExpected(ant1, ant2, phi, -theta);
+	Double_t dt_m = profs[comboInd]->GetBinContent(binx, biny);
 
-//   name += "_2D";
-//   h2 = new TH2D(name, title, 
-// 		numBinsPhi, phiDegMin, phiDegMax,
-// 		numBinsTheta, thetaDegMin, thetaDegMax);
-    
-//   for(Int_t binx=1; binx<=prof->GetXaxis()->GetNbins(); binx++){
-//     Double_t phi = prof->GetXaxis()->GetBinLowEdge(binx) + halfPhiBinWidth;
-//     phi *= TMath::DegToRad();
-//     for(Int_t biny=1; biny<=prof->GetYaxis()->GetNbins(); biny++){
-//       if(prof->GetBinContent(binx, biny) != 0){
-// 	Double_t theta = prof->GetYaxis()->GetBinLowEdge(biny) + halfThetaBinWidth;
-// 	theta *= TMath::DegToRad();
+	//h1->Fill(dt_e); //-dt_m); //*(dt_e-dt_m));
+	// std::cout << dt_e << "\t" << dt_m << std::endl;
+	h1->Fill(dt_e-dt_m);
 
-// 	Double_t dt_e = emptyPat.getDeltaTExpected(ant1, ant2, phi, -theta);
-// 	Double_t dt_m = prof->GetBinContent(binx, biny);
-
-// 	//h1->Fill(dt_e); //-dt_m); //*(dt_e-dt_m));
-// 	// std::cout << dt_e << "\t" << dt_m << std::endl;
-// 	h1->Fill(dt_e-dt_m);
-
-// 	// h2->SetBinContent(binx, biny, dt_e);
-// 	h2->SetBinContent(binx, biny, dt_e-dt_m);	
-//       }
-//     }
-//   }
-// }
+	// h2->SetBinContent(binx, biny, dt_e);
+	h2->SetBinContent(binx, biny, dt_e-dt_m);	
+      }
+    }
+  }
+}

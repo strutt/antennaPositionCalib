@@ -118,13 +118,13 @@ int main(int argc, char *argv[])
     ant2s.push_back(ant2);
     
     TString name = TString::Format("hDtProf_%d_%d", ant1, ant2);
-    TString title = TString::Format("Two dimensional profile of #deltat_{measured} as a function of expected azimuth and elevation for antennas %d and %d; Azimuth (degrees); Elevation (degrees)", ant1, ant2);
+    TString title = TString::Format("2D profile of #deltat_{measured} as a function of expected azimuth and elevation for antennas %d and %d; Azimuth (degrees); Elevation (degrees)", ant1, ant2);
     hDtProfs[comboInd] = new TProfile2D(name, title,
 					numBinsPhi, phiDegMin, phiDegMax,
 					numBinsTheta, thetaDegMin, thetaDegMax);
 
     name = TString::Format("hThetaPhiExpected_%d_%d", ant1, ant2);
-    title = TString::Format("Two dimensional histogram counting number of events as a function of expected azimuth and elevation for antennas %d and %d; Azimuth (degrees); Elevation (degrees)", ant1, ant2);
+    title = TString::Format("Number of events as a function of expected azimuth and elevation for antennas %d and %d; Azimuth (degrees); Elevation (degrees)", ant1, ant2);
     hThetaPhiExpecteds[comboInd] = new TH2D(name,title, 
 					    numBinsPhi, phiDegMin, phiDegMax,
 					    numBinsTheta, thetaDegMin, thetaDegMax);
