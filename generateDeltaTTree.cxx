@@ -88,12 +88,25 @@ int main(int argc, char *argv[])
   Double_t phiExpected;
   UInt_t triggerTimeNs;
   UInt_t triggerTimeNsExpected;    
-  std::vector<std::vector<Double_t> >* correlationDeltaTs = NULL;
-  std::vector<std::vector<Double_t> >* correlationValues = NULL;
+  // std::vector<std::vector<Double_t> >* correlationDeltaTs = NULL;
+  // std::vector<std::vector<Double_t> >* correlationValues = NULL;  
+  // std::vector<Double_t> * deltaPhiDeg = NULL;
+  Double_t correlationDeltaTs[NUM_COMBOS] = {0};
+  Double_t correlationValues[NUM_COMBOS] = {0};
+  Double_t correlationDeltaTsClose[NUM_COMBOS] = {0};
+  Double_t correlationValuesClose[NUM_COMBOS] = {0};
   std::vector<Double_t> * deltaPhiDeg = NULL;
+
   deltaTTree->Branch("eventNumber", &eventNumber);
-  deltaTTree->Branch("correlationDeltaTs", &correlationDeltaTs);
-  deltaTTree->Branch("correlationValues", &correlationValues);
+  deltaTTree->Branch(TString::Format("correlationDeltaTs[%d]", NUM_COMBOS), correlationDeltaTs);
+  deltaTTree->Branch(TString::Format("correlationValues[%d]", NUM_COMBOS), correlationValues);
+  deltaTTree->Branch(TString::Format("correlationDeltaTsClose[%d]", NUM_COMBOS), correlationDeltaTsClose);
+  deltaTTree->Branch(TString::Format("correlationValuesClose[%d]", NUM_COMBOS), correlationValuesClose);
+  
+  // deltaTTree->Branch("correlationDeltaTs", &correlationDeltaTs,
+  // 		     TString::Format("correlationDeltaTs[%d][%d]/D", NUM_POL, NUM_COMBOS));
+  // deltaTTree->Branch("correlationValues", &correlationValues,
+  // 		     TString::Format("correlationValues[%d][%d]/D", NUM_POL, NUM_COMBOS));
   deltaTTree->Branch("thetaExpected", &thetaExpected);
   deltaTTree->Branch("phiExpected", &phiExpected);
   deltaTTree->Branch("deltaPhiDeg", &deltaPhiDeg);
@@ -101,14 +114,16 @@ int main(int argc, char *argv[])
   deltaTTree->Branch("triggerTimeNs", &triggerTimeNs);
   deltaTTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   
-  Int_t upsampleFactor = 32;
-  CrossCorrelator* cc = new CrossCorrelator(upsampleFactor);
-
+  CrossCorrelator* cc = new CrossCorrelator();
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   
   // (*thetaExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   // (*phiExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   (*deltaPhiDeg) = std::vector<Double_t>(NUM_SEAVEYS, 0);
+
+
+  const Double_t deltaTSearchLimit = 1; //ns
+  
   
   for(Long64_t entry = 0; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
@@ -120,6 +135,9 @@ int main(int argc, char *argv[])
       Int_t deltaTriggerTimeNs = Int_t(triggerTimeNs) - Int_t(triggerTimeNsExpected);
       if(TMath::Abs(deltaTriggerTimeNs) < maxDeltaTriggerTimeNs){
 	eventNumber = header->eventNumber;
+
+	// if(eventNumber!=60834309) continue;
+	
 	Double_t distKm = triggerTimeNsExpected*1e-9*C_LIGHT/1e3;
 	hDistanceFromWais->Fill(header->run, distKm);
 	hDeltaTFromWais->Fill(header->run, deltaTriggerTimeNs);
@@ -130,27 +148,51 @@ int main(int argc, char *argv[])
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
 
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
+
+	cc->correlateEvent(usefulEvent, AnitaPol::kHorizontal);
+
+	std::vector<Double_t> corrVals = cc->getMaxCorrelationValues(AnitaPol::kHorizontal);
+	std::vector<Double_t> corrTimes = cc->getMaxCorrelationTimes(AnitaPol::kHorizontal);	
+	for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+	  correlationValues[combo] = corrVals.at(combo);
+	  correlationDeltaTs[combo] = corrTimes.at(combo);	  
+	}
+	
+	
+	for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+	  Int_t ant1 = cc->comboToAnt1s.at(combo);
+	  Int_t ant2 = cc->comboToAnt2s.at(combo);
+	  // Double_t dtExpected = usefulPat.getDeltaTExpected(ant1, ant2, phiExpected, thetaExpected);
+	  Double_t dtExpected = usefulPat.getDeltaTExpected(ant2, ant1, phiExpected, thetaExpected);	  
+
+	  TGraph* gr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, ant1, ant2);
+	    
+	  Double_t minY;
+	  Double_t minX;
+	  RootTools::getMaxMinWithinLimits(gr, correlationValuesClose[combo],
+					   correlationDeltaTsClose[combo],
+					   minY, minX,
+					   dtExpected-deltaTSearchLimit,
+					   dtExpected+deltaTSearchLimit);
+	  // std::cout << ant1 << "\t" << ant2 << "\t" << dtExpected << "\t" << correlationDeltaTs[combo] << "\t" << correlationValues[combo] << "\t" << dtExpected-deltaTSearchLimit << "\t" << dtExpected+deltaTSearchLimit << std::endl;
+
+	  
+	  if(eventNumber==60834309){
+	    gr->SetName(TString::Format("gr%u_%d_%d", eventNumber, ant1, ant2));
+	    gr->Write();
+	  }
+	  
+	  delete gr;
+	}
+
 	phiExpected*=TMath::RadToDeg();
 	thetaExpected*=-1*TMath::RadToDeg();
-
 	for(int ant=0; ant<NUM_SEAVEYS; ant++){
 	  Double_t antPhiDeg = geom->getAntPhiPositionRelToAftFore(ant)*TMath::RadToDeg();
 	  deltaPhiDeg->at(ant) = RootTools::getDeltaAngleDeg(phiExpected, antPhiDeg);
-
-	  
 	}
 
-	cc->correlateEvent(usefulEvent);
 
-	(*correlationDeltaTs) = cc->getMaxCorrelationTimes();
-	(*correlationValues) = cc->getMaxCorrelationValues();
-
-	if(eventNumber==60832576){
-	  TGraph* gr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 16);
-	  gr->SetName("gr60832576_0_16");
-	  gr->Write();
-	  delete gr;
-	}
 	// std::cout << correlationDeltaTs->at(0).at(0) << "\t" << correlationDeltaTs->at(0).size() << "\t" << correlationDeltaTs->size() << std::endl;
 	
 	delete usefulEvent;
@@ -163,7 +205,6 @@ int main(int argc, char *argv[])
   }
   delete cc;
   
-
   outFile->Write();
   outFile->Close();
 

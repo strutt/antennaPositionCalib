@@ -42,7 +42,7 @@ std::vector<Int_t> combos;
 std::vector<Int_t> ant1s;
 std::vector<Int_t> ant2s;
 
-const Int_t VARS_PER_ANT = 4;
+const Int_t VARS_PER_ANT = 1;
 const Int_t numVars = NUM_SEAVEYS*VARS_PER_ANT;
 
 Double_t sumOverSquaredDifferences(const Double_t* allTheVars);
@@ -64,6 +64,11 @@ int main(int argc, char *argv[])
     // // Int_t ant2 = comboInd + 2*NUM_PHI;
     // Int_t ant2 = comboInd + NUM_PHI;
     // Int_t combo = cc->comboIndices[ant1][ant2];
+    if(!(TMath::Abs(ant1 - ant2) == NUM_PHI || TMath::Abs(ant1 - ant2) == (2*NUM_PHI) || TMath::Abs(ant1 - ant2) == 1 || TMath::Abs(ant1 - ant2) == (NUM_PHI-1))){
+      continue;
+    }
+
+    
 
     Int_t combo = comboInd;
     Int_t ant1 = cc->comboToAnt1s.at(comboInd);
@@ -187,32 +192,30 @@ int main(int argc, char *argv[])
     }
     varInd++;
     
-    varName = TString::Format("deltaZ_%d", ant);
-    variables.at(varInd) = 0;
-    min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
-    if(ant==0){
-      min->FixVariable(varInd);
-    }
-    varInd++;
+    // varName = TString::Format("deltaZ_%d", ant);
+    // variables.at(varInd) = 0;
+    // min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
+    // if(ant==0){
+    //   min->FixVariable(varInd);
+    // }
+    // varInd++;
 
-    varName = TString::Format("deltaPhi_%d", ant);
-    variables.at(varInd) = 0;
-    min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
-    if(ant==0){
-      min->FixVariable(varInd);
-    }
-    varInd++;
+    // varName = TString::Format("deltaPhi_%d", ant);
+    // variables.at(varInd) = 0;
+    // min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
+    // if(ant==0){
+    //   min->FixVariable(varInd);
+    // }
+    // varInd++;
     
-    varName = TString::Format("phaseCentreToAmpaDeltaT_%d", ant);
-    variables.at(varInd) = phaseCentreToAmpaDeltaTs.at(ant); //ns
-    min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
-    if(ant==0){
-      min->FixVariable(varInd);
-    }
-    varInd++;
+    // varName = TString::Format("phaseCentreToAmpaDeltaT_%d", ant);
+    // variables.at(varInd) = phaseCentreToAmpaDeltaTs.at(ant); //ns
+    // min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
+    // if(ant==0){
+    //   min->FixVariable(varInd);
+    // }
+    // varInd++;
   }
-
-  
 
   assert(varInd==numVars);
   
