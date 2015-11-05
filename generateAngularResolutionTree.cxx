@@ -7,24 +7,25 @@
              Program to find peak cross correlation offsets between antenna pairs in pulses from Wais Divide.
 *************************************************************************************************************** */
 
-#include <TFile.h>
-#include <TChain.h>
-#include <TGraph.h>
-#include <TH1D.h>
-#include <TH2D.h>
-#include <TCanvas.h>
-#include <TLegend.h>
-#include <TProfile2D.h>
-#include <THnSparse.h>
+#include "TFile.h"
+#include "TChain.h"
+#include "TGraph.h"
+#include "TH1D.h"
+#include "TH2D.h"
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TProfile2D.h"
+#include "THnSparse.h"
 
-#include <RawAnitaHeader.h>
-#include <UsefulAdu5Pat.h>
-#include <UsefulAnitaEvent.h>
-#include <CalibratedAnitaEvent.h>
-#include <AnitaEventCalibrator.h>
+#include "RawAnitaHeader.h"
+#include "UsefulAdu5Pat.h"
+#include "UsefulAnitaEvent.h"
+#include "CalibratedAnitaEvent.h"
+#include "AnitaEventCalibrator.h"
 
-#include <ProgressBar.h>
-#include <CrossCorrelator.h>
+#include "ProgressBar.h"
+#include "CrossCorrelator.h"
+#include "OutputConvention.h"
 
 int main(int argc, char *argv[])
 {
@@ -33,13 +34,6 @@ int main(int argc, char *argv[])
     std::cerr << "Usage 1: " << argv[0] << " [run]" << std::endl;
     std::cerr << "Usage 2: " << argv[0] << " [firstRun] [lastRun]" << std::endl;
     return 1;
-  }
-
-  TString outputDir = "";
-  const char* outputDirPoss = getenv("OUTPUT_DIR");
-  if(outputDirPoss!=NULL){
-    outputDir += TString::Format("%s/", outputDirPoss); // Add trailing forward slash...
-    std::cerr << "Putting output in OUTPUT_DIR = " << outputDirPoss << std::endl;
   }
   
   std::cout << argv[0] << "\t" << argv[1];
@@ -53,14 +47,14 @@ int main(int argc, char *argv[])
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
-  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
-  for(int surf=0; surf<NUM_SURF; surf++){
-    for(int chan=0; chan<NUM_CHAN; chan++){
-      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
-    }
-  }
+  // AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  // geom->useKurtAnitaIIINumbers(1);
+  // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  // for(int surf=0; surf<NUM_SURF; surf++){
+  //   for(int chan=0; chan<NUM_CHAN; chan++){
+  //     cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+  //   }
+  // }
 
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
@@ -78,7 +72,8 @@ int main(int argc, char *argv[])
   CalibratedAnitaEvent* calEvent = NULL;
   calEventChain->SetBranchAddress("event", &calEvent);
   
-  TString outFileName = outputDir + TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
+  OutputConvention oc(argc, argv);
+  TString outFileName = oc.getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
   TTree* angResTree = new TTree("angResTree", "angResTree");
 
@@ -140,7 +135,7 @@ int main(int argc, char *argv[])
   for(Long64_t entry = startEntry; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
     gpsChain->GetEntryWithIndex(header->realTime);
-    if((header->trigType & 1)==1){// && header->eventNumber < 60.95e6 && header->eventNumber > 60.85e6){
+    if((header->trigType & 1)==1 && header->eventNumber < 60.95e6 && header->eventNumber > 60.85e6){
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getWaisDivideTriggerTimeNs();
       triggerTimeNs = header->triggerTimeNs;

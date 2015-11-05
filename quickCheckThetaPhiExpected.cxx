@@ -61,10 +61,11 @@ int main(int argc, char *argv[])
 
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->fUseKurtAnitaIIINumbers = 0; //1;
+  Int_t useKurt = 0;
+  geom->useKurtAnitaIIINumbers(useKurt); //1;
   
 
-  TString titleSuffix = geom->fUseKurtAnitaIIINumbers==1 ? "Photo" : "Feed";  
+  TString titleSuffix = useKurt==1 ? "Photo" : "Feed";
   TString outFileName = TString::Format("%s_run%d-%d", argv[0], firstRun, lastRun) + titleSuffix + "Plots.root";
   TFile* outFile = new TFile(outFileName, "recreate");    
 

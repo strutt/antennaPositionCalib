@@ -16,19 +16,19 @@
 #include <TLegend.h>
 
 
-#include <RawAnitaHeader.h>
-#include <UsefulAdu5Pat.h>
-#include <UsefulAnitaEvent.h>
-#include <CalibratedAnitaEvent.h>
-#include <AnitaEventCalibrator.h>
-#include <AnitaGeomTool.h>
-
-#include <ProgressBar.h>
-#include <CrossCorrelator.h>
+#include "RawAnitaHeader.h"
+#include "UsefulAdu5Pat.h"
+#include "UsefulAnitaEvent.h"
+#include "CalibratedAnitaEvent.h"
+#include "AnitaEventCalibrator.h"
+#include "AnitaGeomTool.h"
+	 
+#include "ProgressBar.h"
+#include "CrossCorrelator.h"
+#include "OutputConvention.h"
 
 int main(int argc, char *argv[])
 {
-
   if(!(argc==3 || argc==2)){
     std::cerr << "Usage 1: " << argv[0] << " [run]" << std::endl;    
     std::cerr << "Usage 2: " << argv[0] << " [firstRun] [lastRun]" << std::endl;
@@ -38,8 +38,6 @@ int main(int argc, char *argv[])
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
   const Double_t maxDeltaTriggerTimeNs = 1200;
-
-
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->useKurtAnitaIIINumbers(1);
@@ -80,9 +78,12 @@ int main(int argc, char *argv[])
   ProgressBar p(maxEntry);
 
   const Double_t maxDistKm = 2e3;
-  const Int_t numDistBins = 2000;  
-  TString outFileName = TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
-  TFile* outFile = new TFile(outFileName, "recreate");    
+  const Int_t numDistBins = 2000;
+  OutputConvention oc(argc, argv);
+  TString outFileName = oc.getOutputFileName();
+  TFile* outFile = new TFile(outFileName, "recreate");
+  // TString outFileName = TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
+  // TFile* outFile = new TFile(outFileName, "recreate");    
   TString title1 = TString::Format("Distance from WAIS divide runs %d - %d; run; Distance (km)", firstRun, lastRun);
   TH2D* hDistanceFromWais = new TH2D("hDistanceFromWais", title1,
 				     lastRun+1-firstRun, firstRun, lastRun+1, numDistBins, 0, maxDistKm);
@@ -134,9 +135,8 @@ int main(int argc, char *argv[])
   // (*phiExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   (*deltaPhiDeg) = std::vector<Double_t>(NUM_SEAVEYS, 0);
 
-
   const Double_t deltaTSearchLimit = 1; //ns
-  
+
   
   for(Long64_t entry = 0; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
@@ -150,6 +150,7 @@ int main(int argc, char *argv[])
 	eventNumber = header->eventNumber;
 
 	// if(eventNumber!=60834309) continue;
+	if(eventNumber!=60832108) continue;	
 	
 	Double_t distKm = triggerTimeNsExpected*1e-9*C_LIGHT/1e3;
 	hDistanceFromWais->Fill(header->run, distKm);

@@ -16,6 +16,9 @@
 #include <TLegend.h>
 #include <TProfile2D.h>
 #include <THnSparse.h>
+#include <Math/Minimizer.h>
+#include <Math/Factory.h>
+#include <Math/Functor.h>
 
 #include <RawAnitaHeader.h>
 #include <UsefulAdu5Pat.h>
@@ -25,6 +28,28 @@
 #include <ProgressBar.h>
 #include <CrossCorrelator.h>
 
+
+Double_t maxDeltaAngleDeg = 22.5;
+std::vector<Int_t> combos;
+std::vector<Int_t> ant1s;
+std::vector<Int_t> ant2s;  
+
+UInt_t eventNumber = 0;
+Double_t correlationDeltaTs[NUM_COMBOS] = {0};
+// Double_t correlationValues[NUM_COMBOS] = {0};  
+Double_t correlationDeltaTsClose[NUM_COMBOS] = {0};
+// Double_t correlationValuesClose[NUM_COMBOS] = {0};  
+
+Long64_t maxEntry = 0; //3000;
+
+TChain* deltaTChain = NULL;
+Adu5Pat* pat = NULL;
+TChain* gpsChain = NULL;
+RawAnitaHeader* header = NULL;
+TChain* headChain = NULL;
+AnitaGeomTool* geom = NULL;
+
+Double_t sumOverSquaredDiffs(const Double_t* vars);
 
 int main(int argc, char *argv[])
 {
@@ -39,47 +64,34 @@ int main(int argc, char *argv[])
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);  
+  geom = AnitaGeomTool::Instance();
+  geom->useKurtAnitaIIINumbers(1);
 
-  TChain* deltaTChain = new TChain("deltaTTree");
+  deltaTChain = new TChain("deltaTTree");
   for(Int_t run=firstRun; run<=lastRun; run++){
     deltaTChain->Add(TString::Format("generateDeltaTTree_run%d-%dPlots.root", run, run));
   }
-  UInt_t eventNumber = 0;
-  Double_t correlationDeltaTs[NUM_COMBOS] = {0};
-  Double_t correlationValues[NUM_COMBOS] = {0};  
-  Double_t correlationDeltaTsClose[NUM_COMBOS] = {0};
-  Double_t correlationValuesClose[NUM_COMBOS] = {0};  
   
   deltaTChain->SetBranchAddress("eventNumber", &eventNumber);
   deltaTChain->SetBranchAddress(TString::Format("correlationDeltaTs[%d]", NUM_COMBOS), correlationDeltaTs);
-  deltaTChain->SetBranchAddress(TString::Format("correlationValues[%d]", NUM_COMBOS), correlationValuesClose);
+  // deltaTChain->SetBranchAddress(TString::Format("correlationValues[%d]", NUM_COMBOS), correlationValuesClose);
   deltaTChain->SetBranchAddress(TString::Format("correlationDeltaTsClose[%d]", NUM_COMBOS), correlationDeltaTsClose);
-  deltaTChain->SetBranchAddress(TString::Format("correlationValuesClose[%d]", NUM_COMBOS), correlationValues);
+  // deltaTChain->SetBranchAddress(TString::Format("correlationValuesClose[%d]", NUM_COMBOS), correlationValues);
   
-  Adu5Pat* pat =0;
-  TChain* gpsChain = RootTools::getAdu5PatChain(firstRun, lastRun, pat);
+  pat =0;
+  gpsChain = RootTools::getAdu5PatChain(firstRun, lastRun, pat);
   gpsChain->BuildIndex("realTime");
 
-  RawAnitaHeader* header = NULL;
-  TChain* headChain = RootTools::getHeadChain(firstRun, lastRun, header);
+  header = NULL;
+  headChain = RootTools::getHeadChain(firstRun, lastRun, header);
   headChain->BuildIndex("eventNumber");
   
-  
-  TString outFileName = TString::Format("%sPlots.root", argv[0]);
-  TFile* outFile = new TFile(outFileName, "recreate");
-
   Long64_t nEntries = deltaTChain->GetEntries();
-  Long64_t maxEntry = 0; //3000;
+  maxEntry = 0; //3000;
   if(maxEntry<=0 || maxEntry > nEntries) maxEntry = nEntries;
   std::cout << "Processing " << maxEntry << " of " << nEntries << " entries." << std::endl;
-  ProgressBar p(maxEntry);
 
   CrossCorrelator* cc = new CrossCorrelator();
-  std::vector<Int_t> combos;
-  std::vector<Int_t> ant1s;
-  std::vector<Int_t> ant2s;  
   
   for(Int_t combo=0; combo < NUM_COMBOS; combo++){
     Int_t ant1 = cc->comboToAnt1s.at(combo);
@@ -90,7 +102,71 @@ int main(int argc, char *argv[])
     ant2s.push_back(ant2);
   }
   delete cc;
+
+
+  ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
+  // set tolerance , etc...
+  min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
+  min->SetMaxIterations(10000);  // for GSL
+  min->SetTolerance(0.001);
+  min->SetPrintLevel(1);
+
+  // create funciton wrapper for minmizer
+  // a IMultiGenFunction type
   
+  Int_t numVars = 3;
+  ROOT::Math::Functor FuncToMin(&sumOverSquaredDiffs, numVars);
+
+  Double_t stepSize = 1e-3;
+  std::vector<Double_t> step = std::vector<Double_t> (numVars, stepSize);
+  
+  // starting point
+  std::vector<Double_t> variables = std::vector<Double_t> (numVars, 0);
+  variables.at(0) = 0;
+  variables.at(1) = 0;
+  variables.at(2) = 0;
+
+  
+  min->SetFunction(FuncToMin);
+  
+  min->SetVariable(0, "pitch offset", variables[0], step[0]);
+  min->SetVariable(1, "roll offset", variables[1], step[1]);  
+  min->SetVariable(2, "heading offset", variables[2], step[2]);  
+
+
+  // Time it
+  TStopwatch watch;
+  watch.Start(kTRUE);
+
+  // do the minimization
+  min->Minimize(); 
+
+  // Time!
+  watch.Start(kFALSE);
+  Int_t seconds = Int_t(watch.RealTime());
+  Int_t hours = seconds / 3600;
+  hours = hours < 0 ? 0 : hours;
+  seconds = seconds - hours * 3600;
+  Int_t mins = seconds / 60;
+  mins = mins < 0 ? 0 : mins;
+  seconds = seconds - mins * 60;
+  fprintf(stderr, "Minimization took %02d:%02d:%02d\n", hours, mins, seconds);
+  
+  std::cout << "Minimum = " << min->MinValue() << std::endl;
+
+  return 0;
+
+}
+
+Double_t sumOverSquaredDiffs(const Double_t* vars){
+
+  Double_t pitchOffset = vars[0];
+  Double_t rollOffset = vars[1];
+  Double_t headingOffset = vars[2];
+
+  Double_t sumOfSquaredDiffs = 0;
+  Double_t count = 0;
+
   for(Long64_t entry = 0; entry < maxEntry; entry++){
     deltaTChain->GetEntry(entry);
 
@@ -103,6 +179,15 @@ int main(int argc, char *argv[])
 
       if(correlationDeltaTsClose[combo]==correlationDeltaTs[combo]){
 	UsefulAdu5Pat usefulPat(pat);
+	usefulPat.pitch = pitchOffset;
+	usefulPat.roll = rollOffset;
+	usefulPat.heading+=headingOffset;
+	if(usefulPat.heading >= 360){
+	  usefulPat.heading-=360;
+	}
+	else if(usefulPat.heading < 0){
+	  usefulPat.heading+=360;
+	}
 
 	Double_t thetaExpected, phiExpected;
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
@@ -113,27 +198,23 @@ int main(int argc, char *argv[])
 	Double_t deltaAngleDeg1 = RootTools::getDeltaAngleDeg(phi1, phiExpected);
 	Double_t deltaAngleDeg2 = RootTools::getDeltaAngleDeg(phi2, phiExpected);
 
-	// std::cout << ant1 << "\t" << phiExpected << "\t" << phi1 << "\t" << deltaAngleDeg1 << std::endl;
-	// std::cout << ant2 << "\t" << phiExpected << "\t" << phi2 << "\t" << deltaAngleDeg2 << std::endl;	
-
-	if(TMath::Abs(deltaAngleDeg1) < 22.5 && TMath::Abs(deltaAngleDeg2) < 22.5){
+	if(TMath::Abs(deltaAngleDeg1) < maxDeltaAngleDeg && TMath::Abs(deltaAngleDeg2) < maxDeltaAngleDeg){
 	
 	  Double_t dt_e = usefulPat.getDeltaTExpected(ant2, ant1,
 						      AnitaLocations::LONGITUDE_WAIS,
 						      AnitaLocations::LATITUDE_WAIS,
 						      AnitaLocations::ALTITUDE_WAIS);
 
-	  std::cout << correlationDeltaTs[combo] << "\t" << dt_e << std::endl;
-
-	}	
+	  Double_t diff = dt_e-correlationDeltaTs[combo];
+	  sumOfSquaredDiffs += diff*diff;
+	  count++;
+	}
       }
-      
     }
-    p++;
   }
-
-  outFile->Write();
-  outFile->Close();
-  return 0;
+  sumOfSquaredDiffs/=count;
+  sumOfSquaredDiffs = TMath::Sqrt(sumOfSquaredDiffs);
+  std::cout << pitchOffset << "\t" << rollOffset << "\t" << headingOffset << "\t" << sumOfSquaredDiffs << std::endl;
+  return sumOfSquaredDiffs;
 
 }

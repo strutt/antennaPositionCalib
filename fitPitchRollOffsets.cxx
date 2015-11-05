@@ -36,6 +36,11 @@ Double_t heading0;
 Double_t funcToMin(Double_t pitchOffet, Double_t rollOffset, Double_t headingOffset);
 
 
+const Double_t amountToRemoveFromHeading = AnitaStaticAdu5Offsets::heading;
+const Double_t amountToRemoveFromPitch = AnitaStaticAdu5Offsets::pitch;
+const Double_t amountToRemoveFromRoll = AnitaStaticAdu5Offsets::roll;    
+
+
 const Int_t numPhiDegBins = 128; //1024;
 const Double_t maxPhiDeg = 360;
 Int_t firstRun;
@@ -54,22 +59,25 @@ int main(int argc, char *argv[])
   std::cout << std::endl;
   firstRun = atoi(argv[1]);
   lastRun = argc==3 ? atoi(argv[2]) : firstRun;
-
+  
   numCalls = 0;
 
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnitaIIINumbers(1);  
+
   TChain* chain = new TChain("angResTree");
+  TChain* chain2 = new TChain("angResTreeFriend");  
 
   for(Int_t run=firstRun; run<=lastRun; run++){
-    // chain->Add(TString::Format("generateAngularResolutionTree_run%d-%dPlots_noPitchRoll.root", run, run));
-    chain->Add(TString::Format("generateAngularResolutionTree_run%d-%dPlots.root", run, run));
+    chain->Add(TString::Format("photogrammetryNoPitchRoll/generateAngularResolutionTree_run%d-%dPlots.root", run, run));
+    chain2->Add(TString::Format("photogrammetryNoPitchRoll/generateAngularResolutionTreeFriend_run%d-%dPlots.root", run, run));
   }
-
+  chain->AddFriend(chain2);
+  
   TFile* gpsFile = TFile::Open("~/UCL/ANITA/flight1415/root/run333/gpsFile333.root");
   TTree* adu5PatTree = (TTree*) gpsFile->Get("adu5PatTree");
   Adu5Pat* pat = NULL;
   adu5PatTree->SetBranchAddress("pat", &pat);
-
-
   
   TString outFileName = TString::Format("%sPlots.root", argv[0]);
   TFile* outFile = new TFile(outFileName, "recreate");
@@ -81,7 +89,7 @@ int main(int argc, char *argv[])
   				  128, -5, 5);				  
   hDeltaThetaDeg->GetXaxis()->SetTitle("#phi_{expected} (Degrees)");
   hDeltaThetaDeg->GetYaxis()->SetTitle("#delta#theta (Degrees)");
-  chain->Draw("deltaThetaDeg:phiExpected>>hDeltaThetaDeg", "TMath::Abs(deltaThetaDeg) < 5", "goff");
+  chain->Draw("deltaThetaDeg0:phiExpected0>>hDeltaThetaDeg", "TMath::Abs(deltaThetaDeg) < 5", "goff");
   hDeltaThetaDeg_pfx = hDeltaThetaDeg->ProfileX();
   hDeltaThetaDeg_pfx->GetYaxis()->SetTitle(hDeltaThetaDeg->GetYaxis()->GetTitle());  
 
@@ -92,7 +100,7 @@ int main(int argc, char *argv[])
 				   128, -5, 5);				  
   hDeltaThetaDeg2->GetXaxis()->SetTitle("#phi_{zoom} (Degrees)");
   hDeltaThetaDeg2->GetYaxis()->SetTitle("#delta#theta (Degrees)");
-  chain->Draw("deltaThetaDeg:zoomPhiDeg>>hDeltaThetaDeg2", "TMath::Abs(deltaThetaDeg) < 5", "goff");  
+  chain->Draw("deltaThetaDeg0:zoomPhiDeg>>hDeltaThetaDeg2", "TMath::Abs(deltaThetaDeg) < 5", "goff");  
   hDeltaThetaDeg2_pfx = hDeltaThetaDeg2->ProfileX();
   hDeltaThetaDeg2_pfx->GetYaxis()->SetTitle(hDeltaThetaDeg2->GetYaxis()->GetTitle());  
   
@@ -103,7 +111,7 @@ int main(int argc, char *argv[])
   				  128, -5, 5);				  
   hDeltaPhiDeg->GetXaxis()->SetTitle("#phi_{expected} (Degrees)");
   hDeltaPhiDeg->GetYaxis()->SetTitle("#delta#phi (Degrees)");
-  chain->Draw("deltaPhiDeg:phiExpected>>hDeltaPhiDeg", "TMath::Abs(deltaPhiDeg) < 5", "goff");
+  chain->Draw("deltaPhiDeg0:phiExpected0>>hDeltaPhiDeg", "TMath::Abs(deltaPhiDeg) < 5", "goff");
   hDeltaPhiDeg_pfx = hDeltaPhiDeg->ProfileX();
   hDeltaPhiDeg_pfx->GetYaxis()->SetTitle(hDeltaPhiDeg->GetYaxis()->GetTitle());  
 
@@ -113,7 +121,7 @@ int main(int argc, char *argv[])
   				  128, -5, 5);				  
   hDeltaPhiDeg2->GetXaxis()->SetTitle("#phi_{zoom} (Degrees)");
   hDeltaPhiDeg2->GetYaxis()->SetTitle("#delta#phi (Degrees)");
-  chain->Draw("deltaPhiDeg:zoomPhiDeg>>hDeltaPhiDeg2", "TMath::Abs(deltaPhiDeg) < 5", "goff");
+  chain->Draw("deltaPhiDeg0:zoomPhiDeg>>hDeltaPhiDeg2", "TMath::Abs(deltaPhiDeg) < 5", "goff");
   hDeltaPhiDeg2_pfx = hDeltaPhiDeg2->ProfileX();
   hDeltaPhiDeg2_pfx->GetYaxis()->SetTitle(hDeltaPhiDeg->GetYaxis()->GetTitle());  
   
@@ -127,40 +135,42 @@ int main(int argc, char *argv[])
 
   adu5PatTree->GetEntry(0);
   usefulPat = UsefulAdu5Pat(pat);
-  // usefulPat.pitch=0;
-  // usefulPat.roll=0;
+  usefulPat.pitch=0;
+  usefulPat.roll=0;
   heading0 = usefulPat.heading;
   // Double_t thetaExpected0, phiExpected0;
   // usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected0, phiExpected0);
 
   std::cout << heading0 << "\t" << pat->heading << std::endl;
 
-  const Double_t minHeadInd = 20; //-10;
-  const Double_t maxHeadInd = 40; //50;
-  const Double_t minPitchInd = -100;
-  const Double_t maxPitchInd = 0;
+  const Double_t minHeadInd = -10;
+  const Double_t maxHeadInd = 10;
+  const Double_t minPitchInd = -10;
+  const Double_t maxPitchInd = 10;
   const Double_t minRollInd = -10;
   const Double_t maxRollInd = 10;
 
+  const Double_t bestHeadingSoFar = 0.3;
+  const Double_t bestPitchSoFar = -0.3;
+  const Double_t bestRollSoFar = 0;
+  Double_t deltaHeading = 0.01;
   Double_t deltaPitch = 0.01;
   Double_t deltaRoll = 0.01;
-  Double_t deltaHeading = 0.01;
-
-  // best pitch = 0.55
-  // best roll = -0.9
-  
 
   Double_t minFom = 1e308;
   Double_t bestPitch = 0;
   Double_t bestHeading = 0;
   Double_t bestRoll = 0;  
 
-  for(Int_t headInd=minHeadInd; headInd<maxHeadInd; headInd++){
-    Double_t headingOffset = headInd * deltaHeading;  
-    for(Int_t pitchInd=minPitchInd; pitchInd<maxPitchInd; pitchInd++){
-      Double_t pitch = pitchInd * deltaPitch;
-      for(Int_t rollInd=minRollInd; rollInd<maxRollInd; rollInd++){
-	Double_t roll = rollInd * deltaRoll;
+  
+  ProgressBar p((maxHeadInd-minHeadInd+1)*(maxPitchInd-minPitchInd+1)*(maxRollInd-minRollInd+1));
+  
+  for(Int_t headInd=minHeadInd; headInd<=maxHeadInd; headInd++){
+    Double_t headingOffset = bestHeadingSoFar + headInd * deltaHeading;
+    for(Int_t pitchInd=minPitchInd; pitchInd<=maxPitchInd; pitchInd++){
+      Double_t pitch = bestPitchSoFar + pitchInd * deltaPitch;
+      for(Int_t rollInd=minRollInd; rollInd<=maxRollInd; rollInd++){
+	Double_t roll = bestRollSoFar + rollInd * deltaRoll;
 
 	Double_t fom = funcToMin(pitch, roll, headingOffset);
 	// std::cout << "fom = " << fom << std::endl;
@@ -170,13 +180,19 @@ int main(int argc, char *argv[])
 	  bestHeading = headingOffset;
 	  minFom = fom;
 	}
+	p++;
       }
     }
   }
 
-  std::cout << "best pitch = " << bestPitch << std::endl;
-  std::cout << "best roll = " << bestRoll << std::endl;
-  std::cout << "best heading = " << bestHeading << std::endl;    
+  // std::cout << amountToRemoveFromPitch << "\t" << amountToRemoveFromRoll << "\t" << amountToRemoveFromHeading << std::endl;
+
+
+  // std::cout << usefulPat.pitch << "\t" << usefulPat.roll << std::endl;
+  
+  std::cout << "minHeading = " << bestHeadingSoFar+minHeadInd*deltaHeading << "\tmaxHeading = " << bestHeadingSoFar+maxHeadInd*deltaHeading << "\tbest heading = " << bestHeading << std::endl;
+  std::cout << "minPitch = " << bestPitchSoFar+minPitchInd*deltaPitch << "\tmaxPitch = " << bestPitchSoFar+maxPitchInd*deltaPitch << "\tbest pitch = " << bestPitch << std::endl;
+  std::cout << "minRoll = " << bestRollSoFar+minRollInd*deltaRoll << "\tmaxRoll = " << bestRollSoFar+maxRollInd*deltaRoll << "\tbest roll = " << bestRoll << std::endl;
 
   // bestPitch = 0; //-0.4; //0.05;
   // bestRoll = 0.4;
@@ -190,11 +206,11 @@ int main(int argc, char *argv[])
   for(Int_t headInd=0; headInd < numPhiDegBins; headInd++){
 
     Double_t thisHeading = headInd*(maxPhiDeg/numPhiDegBins) - heading0;
-    if(thisHeading < 0) thisHeading += 360;
-    if(thisHeading >= 360) thisHeading -= 360;
-    usefulPat.heading = thisHeading;
-    usefulPat.pitch = 0;
-    usefulPat.roll = 0;
+    usefulPat.heading = thisHeading + AnitaStaticAdu5Offsets::heading - amountToRemoveFromHeading;
+    if(usefulPat.heading < 0) usefulPat.heading += 360;
+    if(usefulPat.heading >= 360) usefulPat.heading -= 360;
+    usefulPat.pitch = AnitaStaticAdu5Offsets::pitch - amountToRemoveFromPitch;
+    usefulPat.roll = AnitaStaticAdu5Offsets::roll - amountToRemoveFromRoll;
 
     Double_t thetaExpected0, phiExpected0;
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected0, phiExpected0);
@@ -213,8 +229,8 @@ int main(int argc, char *argv[])
     usefulPat.heading = thisHeading + bestHeading;
     if(usefulPat.heading < 0) usefulPat.heading += 360;
     if(usefulPat.heading >= 360) usefulPat.heading -= 360;
-    usefulPat.pitch += bestPitch;
-    usefulPat.roll += bestRoll;
+    usefulPat.pitch = bestPitch;
+    usefulPat.roll = bestRoll;
     
     Double_t thetaExpected, phiExpected;
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
@@ -346,14 +362,15 @@ Double_t funcToMin(Double_t pitchOffset, Double_t rollOffset, Double_t headingOf
   Double_t sumOfSquares = 0;
   for(Int_t headInd=0; headInd < numPhiDegBins; headInd++){
 
-    Double_t thisHeading = headInd*(maxPhiDeg/numPhiDegBins) - heading0 + headingOffset;
-    usefulPat.heading = thisHeading;
-
+    // Double_t thisHeading = headInd*(maxPhiDeg/numPhiDegBins) - heading0 + headingOffset;
+    // usefulPat.heading = thisHeading;
+    Double_t thisHeading = headInd*(maxPhiDeg/numPhiDegBins) - heading0;
+    usefulPat.heading = thisHeading + AnitaStaticAdu5Offsets::heading - amountToRemoveFromHeading;
     if(usefulPat.heading < 0) usefulPat.heading += 360;
     if(usefulPat.heading >= 360) usefulPat.heading -= 360;
-    usefulPat.pitch = 0;
-    usefulPat.roll = 0;
-
+    usefulPat.pitch = AnitaStaticAdu5Offsets::pitch - amountToRemoveFromPitch;
+    usefulPat.roll = AnitaStaticAdu5Offsets::roll - amountToRemoveFromRoll;
+    
     Double_t thetaExpected0, phiExpected0;
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected0, phiExpected0);
     thetaExpected0 *= -1*TMath::RadToDeg();
