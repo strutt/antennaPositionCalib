@@ -28,10 +28,25 @@
 #include <ProgressBar.h>
 #include <CrossCorrelator.h>
 
-// const Int_t numCombos = NUM_PHI;
-const Int_t numCombos = NUM_COMBOS;
-THnSparseF* hSparses[numCombos];
-TH2D* hProfs[numCombos];
+const Double_t extraCableDelays[NUM_SEAVEYS] =
+  {0,0.139733,0.00697198,0.0870043,0.0502864,0.139811,0.0564542,0.143131,
+   0.0755872,0.10746, -0.0529778,0.109205,0.0199421,0.062739,0.0813765,
+   0.033311,0.107176,0.141001,0.104494,0.16646,0.135572,0.14326,0.172411,
+   0.113276,0.135898,0.0634696,0.078761,0.0890165,0.198665,0.0649681,0.057582,
+   0.0800643,0.0635002,0.211805,0.133592,0.136322,0.125028,0.0841643,0.13517,
+   0.0633426,0.0853349,0.0491331,0.0996015,0.0681319,0.0430019,0.0380842,
+   0.0419707,-0.2944};
+
+const Double_t fittedDeltaRs[NUM_SEAVEYS] =
+  {-0.0959145, -0.0969593, -0.0976093, -0.0971427, -0.0972972, -0.0971141, -0.0971505, -0.0964771,
+   -0.0960801, -0.094751 , -0.0938789, -0.0931123, -0.0941293, -0.0937031, -0.0944757, -0.0954,
+   -0.0958407, -0.0967933, -0.0975012, -0.0970367, -0.0971045, -0.0971866, -0.0969005, -0.0965772,
+   -0.0958794, -0.0949967, -0.0939146, -0.0936601, -0.0936972, -0.0940001, -0.0947252, -0.0954105,
+   -0.0959116, -0.0966248, -0.0972106, -0.0971995, -0.0969414, -0.0970038, -0.0968214, -0.0965757,
+   -0.0959988, -0.0949063, -0.0933371, -0.0934933, -0.0942268, -0.094005 , -0.0948142, -0.0957325};
+
+
+std::vector<THnSparseF*> hSparses;
 AnitaGeomTool* geom;
 UsefulAdu5Pat emptyPat;
 std::vector<Double_t> rArray;
@@ -58,29 +73,27 @@ int main(int argc, char *argv[])
   TFile* fInputFile = TFile::Open("generateDeltaTLookupHistogramsPlots.root");
   CrossCorrelator* cc = new CrossCorrelator();
 
-  for(Int_t comboInd=0; comboInd < numCombos; comboInd++){
+  for(Int_t comboInd=0; comboInd < NUM_COMBOS; comboInd++){
     // Int_t ant1 = comboInd; // i.e. phi
     // // Int_t ant2 = (comboInd + 1)%NUM_PHI;
     // // Int_t ant2 = comboInd + 2*NUM_PHI;
     // Int_t ant2 = comboInd + NUM_PHI;
     // Int_t combo = cc->comboIndices[ant1][ant2];
-    if(!(TMath::Abs(ant1 - ant2) == NUM_PHI || TMath::Abs(ant1 - ant2) == (2*NUM_PHI) || TMath::Abs(ant1 - ant2) == 1 || TMath::Abs(ant1 - ant2) == (NUM_PHI-1))){
-      continue;
-    }
-
-    
 
     Int_t combo = comboInd;
     Int_t ant1 = cc->comboToAnt1s.at(comboInd);
-    Int_t ant2 = cc->comboToAnt2s.at(comboInd);    
+    Int_t ant2 = cc->comboToAnt2s.at(comboInd);
+
+    if(!(TMath::Abs(ant1 - ant2) == NUM_PHI || TMath::Abs(ant1 - ant2) == (2*NUM_PHI) || TMath::Abs(ant1 - ant2) == 1 || TMath::Abs(ant1 - ant2) == (NUM_PHI-1))){
+      continue;
+    }
+    
     // std:: cout << ant1 << "\t" << ant2 << "\t" << combo << std::endl;
     combos.push_back(combo);
     ant1s.push_back(ant1);
     ant2s.push_back(ant2);
     TString name = TString::Format("hDtSparse_%d_%d", ant1, ant2);
-    hSparses[comboInd] = (THnSparseF*) fInputFile->Get(name);
-
-    hProfs[comboInd] = NULL; 
+    hSparses.push_back((THnSparseF*) fInputFile->Get(name));
   }
   
   TString outFileName = TString::Format("%sPlots.root", argv[0]);
@@ -185,20 +198,20 @@ int main(int argc, char *argv[])
     Int_t ant = antInd;
 
     TString varName = TString::Format("deltaR_%d", ant);
+    // variables.at(varInd) = 0;
+    // min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
+    // // if(ant==0){
+    // //   min->FixVariable(varInd);
+    // // }
+    // varInd++;
+    
+    varName = TString::Format("deltaZ_%d", ant);
     variables.at(varInd) = 0;
     min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
     if(ant==0){
       min->FixVariable(varInd);
     }
     varInd++;
-    
-    // varName = TString::Format("deltaZ_%d", ant);
-    // variables.at(varInd) = 0;
-    // min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
-    // if(ant==0){
-    //   min->FixVariable(varInd);
-    // }
-    // varInd++;
 
     // varName = TString::Format("deltaPhi_%d", ant);
     // variables.at(varInd) = 0;
@@ -217,7 +230,9 @@ int main(int argc, char *argv[])
     // varInd++;
   }
 
-  assert(varInd==numVars);
+  if(varInd != numVars){
+    std::cerr << "Warning! Number of fitting variables mismatched!" << std::endl;
+  }
   
   // for(Int_t varInd=0; varInd < numVars; varInd++){
   //   Int_t ant = NUM_PHI + varInd;
@@ -276,14 +291,20 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
   for(Int_t antInd=0; antInd < NUM_SEAVEYS; antInd++){
     Int_t ant = antInd;
 
-    geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+vars[varInd];
-    varInd++;
+    // geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+vars[varInd];
+    // varInd++;
+
+    geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+fittedDeltaRs[ant];
+    
     geom->zPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = zArray.at(ant)+vars[varInd];
     varInd++;
-    geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = phiArray.at(ant)+vars[varInd];
-    varInd++;
-    phaseCentreToAmpaDeltaTs.at(ant) = vars[varInd];
-    varInd++;
+    // geom->azPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = phiArray.at(ant)+vars[varInd];
+    // varInd++;
+
+    // phaseCentreToAmpaDeltaTs.at(ant) = vars[varInd];
+    // varInd++;
+    phaseCentreToAmpaDeltaTs.at(ant) = extraCableDelays[ant];    
+
   }
 
 
@@ -296,17 +317,9 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
   //   geom->rPhaseCentreFromVerticalHornKurtAnitaIII[ant][AnitaPol::kVertical] = rArray.at(ant)+deltaR[varInd];
   // }
   
-  for(int comboInd=0; comboInd<numCombos; comboInd++){
+  for(UInt_t comboInd=0; comboInd<combos.size(); comboInd++){
 
-    // TH2D* prof = hProfs[comboInd];
-    THnSparseF* hSparse = hSparses[comboInd];
-    // std::cout << hSparse << std::endl;
-    // Double_t halfThetaBinWidth = 0.5*(prof->GetYaxis()->GetBinLowEdge(2) - prof->GetYaxis()->GetBinLowEdge(1));
-    // Double_t halfPhiBinWidth = 0.5*(prof->GetXaxis()->GetBinLowEdge(2) - prof->GetXaxis()->GetBinLowEdge(1));
-
-    Double_t halfThetaBinWidth = 0.5*(hSparse->GetAxis(1)->GetBinLowEdge(2) - hSparse->GetAxis(1)->GetBinLowEdge(1));
-    Double_t halfPhiBinWidth = 0.5*(hSparse->GetAxis(0)->GetBinLowEdge(2) - hSparse->GetAxis(0)->GetBinLowEdge(1));
-
+    THnSparseF* hSparse = hSparses.at(comboInd);
     Int_t ant1 = ant1s.at(comboInd);
     Int_t ant2 = ant2s.at(comboInd);
 
@@ -315,103 +328,26 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
       Double_t dt_m = hSparse->GetBinContent(binInd, coords);
       Int_t phiBin = coords[0];
       Int_t thetaBin = coords[1];
-      Double_t theta = hSparse->GetAxis(1)->GetBinLowEdge(thetaBin) + halfThetaBinWidth;
-      Double_t phi = hSparse->GetAxis(0)->GetBinLowEdge(phiBin) + halfPhiBinWidth;
-      // std::cout << dt_m << '\t' << phiBin << "\t" << thetaBin << "\t" << phi << "\t" << theta << std::endl;
-      
-    //   std::cout << dt_m << "\t" << phiBin << "\t" << thetaBin << std::endl;
-    // }
-    
-    
-    // for(Int_t binx=1; binx<=prof->GetXaxis()->GetNbins(); binx++){
-    //   Double_t phi = prof->GetXaxis()->GetBinLowEdge(binx) + halfPhiBinWidth;
+      Double_t theta = hSparse->GetAxis(1)->GetBinLowEdge(thetaBin);
+      Double_t phi = hSparse->GetAxis(0)->GetBinLowEdge(phiBin);
+
       phi *= TMath::DegToRad();
-      // for(Int_t biny=1; biny<=prof->GetYaxis()->GetNbins(); biny++){
-      // 	if(prof->GetBinContent(binx, biny) != 0){
-	  // Double_t theta = prof->GetYaxis()->GetBinLowEdge(biny) + halfThetaBinWidth;
       theta *= -1*TMath::DegToRad(); // INVERSION
-      Double_t dt_e = emptyPat.getDeltaTExpected(ant1, ant2, phi, theta);
-      dt_e += phaseCentreToAmpaDeltaTs.at(ant1);
-      dt_e -= phaseCentreToAmpaDeltaTs.at(ant2);
-	  
-      // Double_t dt_m = prof->GetBinContent(binx, biny);
+
+      // This function doesn't care about offsets.
+      // That only comes into play when considering a source location.
+      Double_t dt_e = emptyPat.getDeltaTExpected(ant2, ant1, phi, theta);
+
+      // std::cout << dt_e << "\t" << dt_m << std::endl;
+      
+      // Is this the right way around?
+      dt_m += phaseCentreToAmpaDeltaTs.at(ant1);
+      dt_m -= phaseCentreToAmpaDeltaTs.at(ant2);
+
       Double_t diff = dt_e - dt_m;
       count++;
       sumOfSquareDifferences += diff*diff;
-      // 	}
-      // }
     }
   }
   return TMath::Sqrt(sumOfSquareDifferences/count);
-}
-
-
-
-void makeHistosFromGeom(Int_t comboInd, TH1D* h1, TH2D* h2, TString nameAppended, TString titleAppended){
-
-
-  if(hProfs[comboInd]==NULL){
-    hProfs[comboInd] = hSparses[comboInd]->Projection(1, 0);
-  }
-  TH2D* prof = hProfs[comboInd];
-  
-  const Int_t numBinsPhi = prof->GetXaxis()->GetNbins();
-  Double_t thetaDegMin = -50;
-  Double_t thetaDegMax = 50;
-  const Int_t numBinsTheta = prof->GetYaxis()->GetNbins();
-  Double_t halfThetaBinWidth = 0.5*(prof->GetYaxis()->GetBinLowEdge(2) - prof->GetYaxis()->GetBinLowEdge(1));
-  Double_t halfPhiBinWidth = 0.5*(prof->GetXaxis()->GetBinLowEdge(2) - prof->GetXaxis()->GetBinLowEdge(1));
-  Double_t phiDegMin = 0;
-  Double_t phiDegMax = 360;
-
-  Int_t ant1 = ant1s.at(comboInd);
-  Int_t ant2 = ant2s.at(comboInd);
-  
-  TString name = "hPureDiff_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
-  TString title = TString::Format("Difference between measured and predicted #deltats for antennas %d and %d", ant1, ant2);
-  title += titleAppended;
-  title += "; #deltat_{expected} - #deltat_{measured} (ns)";
-  title += "; Number of bins";
-
-  if(h1!=NULL){
-    delete h1;
-  }
-  if(h2!=NULL){
-    delete h2;
-  }
-  
-  h1 = new TH1D(name, title, 32, -0.5, 0.5);
-
-  name = "hDtExpected_2D_" + nameAppended + TString::Format("_%d_%d", ant1, ant2);
-  title = TString::Format("Predicted #deltats for antennas %d and %d", ant1, ant2);
-  title += "; Azimuth (degrees)";
-  title += "; Elevation (degrees)";  
-  title += "; #delta t_{expected} (ns)";    
-  
-  h2 = new TH2D(name, title, 
-		numBinsPhi, phiDegMin, phiDegMax,
-		numBinsTheta, thetaDegMin, thetaDegMax);
-    
-
-
-  for(Int_t binx=1; binx<=prof->GetXaxis()->GetNbins(); binx++){
-    Double_t phi = prof->GetXaxis()->GetBinLowEdge(binx) + halfPhiBinWidth;
-    phi *= TMath::DegToRad();
-    for(Int_t biny=1; biny<=prof->GetYaxis()->GetNbins(); biny++){
-      if(prof->GetBinContent(binx, biny) != 0){
-	Double_t theta = prof->GetYaxis()->GetBinLowEdge(biny) + halfThetaBinWidth;
-	theta *= TMath::DegToRad();
-
-	Double_t dt_e = emptyPat.getDeltaTExpected(ant1, ant2, phi, -theta);
-	Double_t dt_m = prof->GetBinContent(binx, biny);
-
-	//h1->Fill(dt_e); //-dt_m); //*(dt_e-dt_m));
-	// std::cout << dt_e << "\t" << dt_m << std::endl;
-	h1->Fill(dt_e-dt_m);
-
-	// h2->SetBinContent(binx, biny, dt_e);
-	h2->SetBinContent(binx, biny, dt_e-dt_m);	
-      }
-    }
-  }
 }
