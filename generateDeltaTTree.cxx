@@ -20,6 +20,8 @@
 #include <UsefulAdu5Pat.h>
 #include <UsefulAnitaEvent.h>
 #include <CalibratedAnitaEvent.h>
+#include <AnitaEventCalibrator.h>
+#include <AnitaGeomTool.h>
 
 #include <ProgressBar.h>
 #include <CrossCorrelator.h>
@@ -37,6 +39,18 @@ int main(int argc, char *argv[])
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
   const Double_t maxDeltaTriggerTimeNs = 1200;
 
+
+  
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnitaIIINumbers(1);
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  for(int surf=0; surf<NUM_SURF; surf++){
+    for(int chan=0; chan<NUM_CHAN; chan++){
+      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+    }
+  }
+
+  
 
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
@@ -115,7 +129,6 @@ int main(int argc, char *argv[])
   deltaTTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   
   CrossCorrelator* cc = new CrossCorrelator();
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
   
   // (*thetaExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
   // (*phiExpected) = std::vector<Double_t>(NUM_COMBOS, 0);
@@ -149,15 +162,24 @@ int main(int argc, char *argv[])
 
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 
-	cc->correlateEvent(usefulEvent, AnitaPol::kHorizontal);
+	// cc->correlateEvent(usefulEvent, AnitaPol::kHorizontal);
 
-	std::vector<Double_t> corrVals = cc->getMaxCorrelationValues(AnitaPol::kHorizontal);
-	std::vector<Double_t> corrTimes = cc->getMaxCorrelationTimes(AnitaPol::kHorizontal);	
-	for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-	  correlationValues[combo] = corrVals.at(combo);
-	  correlationDeltaTs[combo] = corrTimes.at(combo);	  
-	}
+	// Interface in flux, let's hack our way through this...
+	cc->getNormalizedInterpolatedTGraphs(usefulEvent, AnitaPol::kHorizontal);  
+	cc->doFFTs(AnitaPol::kHorizontal);
+	cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, 0xffff);
+	cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0xffff);
+
+
+	// for(Int_t combo=0; combo<NUM_COMBOS; combo++){	
+	//   std::cout << combo << "\t" << cc->crossCorrelationsUpsampled[AnitaPol::kHorizontal][combo] << std::endl;
+	// }
 	
+	for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+	  cc->getMaxUpsampledCorrelationTimeValue(AnitaPol::kHorizontal, combo,
+						  correlationDeltaTs[combo],
+						  correlationValues[combo]);
+	}
 	
 	for(Int_t combo=0; combo<NUM_COMBOS; combo++){
 	  Int_t ant1 = cc->comboToAnt1s.at(combo);
@@ -165,7 +187,7 @@ int main(int argc, char *argv[])
 	  // Double_t dtExpected = usefulPat.getDeltaTExpected(ant1, ant2, phiExpected, thetaExpected);
 	  Double_t dtExpected = usefulPat.getDeltaTExpected(ant2, ant1, phiExpected, thetaExpected);	  
 
-	  TGraph* gr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, ant1, ant2);
+	  TGraph* gr = cc->getUpsampledCrossCorrelationGraph(AnitaPol::kHorizontal, ant1, ant2);
 	    
 	  Double_t minY;
 	  Double_t minX;

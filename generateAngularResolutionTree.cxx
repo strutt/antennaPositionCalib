@@ -21,6 +21,7 @@
 #include <UsefulAdu5Pat.h>
 #include <UsefulAnitaEvent.h>
 #include <CalibratedAnitaEvent.h>
+#include <AnitaEventCalibrator.h>
 
 #include <ProgressBar.h>
 #include <CrossCorrelator.h>
@@ -29,10 +30,18 @@ int main(int argc, char *argv[])
 {
 
   if(!(argc==3 || argc==2)){
-    std::cerr << "Usage 1: " << argv[0] << " [run]" << std::endl;    
+    std::cerr << "Usage 1: " << argv[0] << " [run]" << std::endl;
     std::cerr << "Usage 2: " << argv[0] << " [firstRun] [lastRun]" << std::endl;
     return 1;
   }
+
+  TString outputDir = "";
+  const char* outputDirPoss = getenv("OUTPUT_DIR");
+  if(outputDirPoss!=NULL){
+    outputDir += TString::Format("%s/", outputDirPoss); // Add trailing forward slash...
+    std::cerr << "Putting output in OUTPUT_DIR = " << outputDirPoss << std::endl;
+  }
+  
   std::cout << argv[0] << "\t" << argv[1];
   if(argc==3){std::cout << "\t" << argv[2];}
   std::cout << std::endl;
@@ -44,6 +53,14 @@ int main(int argc, char *argv[])
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
 
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnitaIIINumbers(1);
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  for(int surf=0; surf<NUM_SURF; surf++){
+    for(int chan=0; chan<NUM_CHAN; chan++){
+      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+    }
+  }
 
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
@@ -59,9 +76,9 @@ int main(int argc, char *argv[])
   gpsChain->SetBranchAddress("pat", &pat);
   gpsChain->BuildIndex("realTime");  
   CalibratedAnitaEvent* calEvent = NULL;
-  calEventChain->SetBranchAddress("event", &calEvent);  
+  calEventChain->SetBranchAddress("event", &calEvent);
   
-  TString outFileName = TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
+  TString outFileName = outputDir + TString::Format("%s_run%d-%dPlots.root", argv[0], firstRun, lastRun);
   TFile* outFile = new TFile(outFileName, "recreate");
   TTree* angResTree = new TTree("angResTree", "angResTree");
 
@@ -85,7 +102,6 @@ int main(int argc, char *argv[])
   UInt_t l3TrigPatternH;
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
-
   angResTree->Branch("globalPeak", &globalPeak);
   angResTree->Branch("globalPhiDeg", &globalPhiDeg);
   angResTree->Branch("globalThetaDeg", &globalThetaDeg);
@@ -99,7 +115,7 @@ int main(int argc, char *argv[])
   angResTree->Branch("zoomThetaDeg", &zoomThetaDeg);
 
   angResTree->Branch("deltaPhiDeg", &deltaPhiDeg);
-  angResTree->Branch("deltaThetaDeg", &deltaThetaDeg);  
+  angResTree->Branch("deltaThetaDeg", &deltaThetaDeg);
 
   angResTree->Branch("thetaExpected", &thetaExpected);
   angResTree->Branch("phiExpected", &phiExpected);
@@ -107,13 +123,13 @@ int main(int argc, char *argv[])
   angResTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   angResTree->Branch("heading", &heading);
   angResTree->Branch("l3TrigPatternH", &l3TrigPatternH);
-  angResTree->Branch("eventNumber", &eventNumber);    
+  angResTree->Branch("eventNumber", &eventNumber);
 
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
   CrossCorrelator* cc = new CrossCorrelator();
 
   Long64_t nEntries = headChain->GetEntries();
-  Long64_t maxEntry = 0; //5000; //5000;
+  Long64_t maxEntry = 0; //5000;
   Long64_t startEntry = 0;
   if(maxEntry<=0 || maxEntry > nEntries) maxEntry = nEntries;
   std::cout << "Processing " << maxEntry << " of " << nEntries << " entries." << std::endl;
@@ -124,7 +140,7 @@ int main(int argc, char *argv[])
   for(Long64_t entry = startEntry; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
     gpsChain->GetEntryWithIndex(header->realTime);
-    if((header->trigType & 1)==1){
+    if((header->trigType & 1)==1){// && header->eventNumber < 60.95e6 && header->eventNumber > 60.85e6){
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getWaisDivideTriggerTimeNs();
       triggerTimeNs = header->triggerTimeNs;
@@ -136,12 +152,13 @@ int main(int argc, char *argv[])
 	heading = usefulPat.heading;
 	l3TrigPatternH = header->l3TrigPatternH;
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
-
+	globalPhiDeg = usefulEvent->eventNumber;
+	
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
 	thetaExpected*=-1*TMath::RadToDeg();
-	
-	cc->correlateEvent(usefulEvent);
+
+	cc->correlateEvent(usefulEvent, AnitaPol::kHorizontal);
 
 	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
@@ -152,21 +169,20 @@ int main(int argc, char *argv[])
 						 zoomThetaDeg, l3TrigPatternH,
 						 triggeredPhiDeg, triggeredThetaDeg);
 	
-
 	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
-	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;	
+	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;
 
 	triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
-	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;	
+	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
 
 	zoomPhiDeg = zoomPhiDeg < 0 ? zoomPhiDeg + 360 : zoomPhiDeg;
-	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;	
+	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;
 
 	phiExpected = phiExpected < 0 ? phiExpected + 360 : phiExpected;
-	phiExpected = phiExpected >= 360 ? phiExpected - 360 : phiExpected;	
+	phiExpected = phiExpected >= 360 ? phiExpected - 360 : phiExpected;
 
 	deltaPhiDeg = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg);
-	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);	
+	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);
 	
 	if(numSaved < maxToSave){
 	  numSaved++;
@@ -177,8 +193,9 @@ int main(int argc, char *argv[])
 	  delete hZoomedImageH;	  
 	}
 
-	
 	angResTree->Fill();
+
+	delete usefulEvent;
 	
       }
     }
