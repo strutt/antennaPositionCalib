@@ -78,11 +78,11 @@ int main(int argc, char *argv[])
 
   const Double_t phiDegMin = 0;
   const Double_t phiDegMax = 360;
-  const Int_t numBinsPhi = 2048;
-  const Double_t thetaDegMin = -50;
-  const Double_t thetaDegMax = 50;
-  const Int_t numBinsTheta = 512;
-  const Double_t maxDeltaPhiDeg = 22.5*3; //2;
+  const Int_t numBinsPhi = 2048; //3600
+  const Double_t thetaDegMin = -20;
+  const Double_t thetaDegMax = 0;
+  const Int_t numBinsTheta = 128; //200;
+  const Double_t maxDeltaPhiDeg = 22.5; //2;
 
   const Double_t minDeltaTBin = -50;
   const Double_t maxDeltaTBin = 50;
@@ -160,8 +160,6 @@ int main(int argc, char *argv[])
     
   }
   delete cc;
-
-  
   
   std::cout << "Generating lookup TProfile2Ds" << std::endl;
   for(Long64_t entry = 0; entry < maxEntry; entry++){
@@ -184,58 +182,23 @@ int main(int argc, char *argv[])
       Double_t antPhiDeg1 = geom->getAntPhiPositionRelToAftFore(ant1)*TMath::RadToDeg();
       Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiExpected0,
 							  antPhiDeg1);
-      // Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiExpected, antPhiDeg1);
 
       Double_t antPhiDeg2 = geom->getAntPhiPositionRelToAftFore(ant2)*TMath::RadToDeg();
       Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiExpected0,
 							  antPhiDeg2);
-      // Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiExpected, antPhiDeg2);
-
-      // if(ant1==4 && ant2==18){
-      // 	if(TMath::Abs(deltaPhiDeg1) < 45 || TMath::Abs(deltaPhiDeg2) < 45){
-      // 	  if(phiExpected < 45){
-      // 	    std::cout << phiExpected << "\t" << geom->getAntPhiPositionRelToAftFore(ant1)*TMath::RadToDeg()
-      // 		      << "\t" << geom->getAntPhiPositionRelToAftFore(ant2)*TMath::RadToDeg() << "\t"
-      // 		      << deltaPhiDeg1 << "\t" << deltaPhiDeg2 << std::endl;
-      // 	  }
-      // 	}
-      // }
       
       if(TMath::Abs(deltaPhiDeg1) < maxDeltaPhiDeg && TMath::Abs(deltaPhiDeg2) < maxDeltaPhiDeg){
-	// if(TMath::Abs(correlationDeltaTsClose[combo] - correlationDeltaTs[combo]) < 0.1){
+	
 	if(correlationDeltaTsClose[combo]==correlationDeltaTs[combo]){
 
 	  Double_t dt_m = correlationDeltaTsClose[combo];
-	  // AnitaEventCalibrator* cally = AnitaEventCalibrator::Instance();
-	  // Int_t surf, chan, ant;
-	  // geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t(ant1/NUM_PHI),
-	  // 				     ant1%NUM_PHI, AnitaPol::kHorizontal,
-	  // 				     surf, chan, ant);
-	  // if(ant1 != ant){std::cerr << "???1" << std::endl;}
-	  // dt_m += cally->relativePhaseCenterToAmpaDelays[surf][chan];
-	  // geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t(ant2/NUM_PHI),
-	  // 				     ant2%NUM_PHI, AnitaPol::kHorizontal,
-	  // 				     surf, chan, ant);
-	  // if(ant2 != ant){std::cerr << ant2 << "\t" << ant << "???2" << std::endl;}
-	  // dt_m -= cally->relativePhaseCenterToAmpaDelays[surf][chan];
-
-	  // Double_t deltaR = -0.1;
-	  // for(int anta=0; anta < 48; anta++){
-	  //   geom->rPhaseCentreFromVerticalHornKurtAnitaIII[anta][AnitaPol::kVertical]+=deltaR;
-	  // }
 	  Double_t dt_e = usefulPat.getDeltaTExpected(ant2, ant1,
 	  					      phiExpected0*TMath::DegToRad(),
 	  					      -1*thetaExpected0*TMath::DegToRad());
-	  // for(int anta=0; anta < 48; anta++){
-	  //   geom->rPhaseCentreFromVerticalHornKurtAnitaIII[anta][AnitaPol::kVertical]-=deltaR;
-	  // }
 
 	  gr[combo]->SetPoint(gr[combo]->GetN(), phiExpected, dt_e - dt_m);
 
 	  hDtProfs[combo]->Fill(phiExpected0, thetaExpected0, correlationDeltaTsClose[combo]);
-	  // hDtProfs[combo]->Fill(phiExpected0, thetaExpected0, dt_e - dt_m);	  
-	  // hDtProfs[combo]->Fill(phiExpected, thetaExpected, correlationDeltaTsClose[combo]);
-	  // hDtProf->Fill(deltaPhiDeg->at(0), thetaExpected, correlationDeltaTs[combo]);
 
 	  const Int_t nDim = 2;
 	  Double_t coords1[nDim] = {phiExpected0, thetaExpected0};
@@ -249,7 +212,6 @@ int main(int argc, char *argv[])
 
 	  const Int_t nDim4 = 2;
 	  Double_t coords4[nDim4] = {correlationDeltaTs[combo], correlationValues[combo]};
-	  // std::cout << coords4[0] << "\t" << coords4[1] << std::endl;
 	  hCorrDts[combo]->Fill(coords4);
 	}
       }
@@ -259,7 +221,7 @@ int main(int argc, char *argv[])
   
   THnSparseF* hSparses[numCombos];
   THnSparseF* hSparses2[numCombos];  
-  //  const char* name, const char* title, Int_t dim, const Int_t* nbins, const Double_t* xmin = 0, const Double_t* xmax = 0, Int_t chunksize = 1024*16
+
   for(Int_t combo=0; combo<numCombos; combo++){
     Int_t ant1 = ant1s.at(combo);
     Int_t ant2 = ant2s.at(combo);
@@ -279,10 +241,10 @@ int main(int argc, char *argv[])
     // std::cout << name2.Data() << std::endl;
 
     
-    Double_t halfThetaBinWidth = 0.5*(hDtProfs[combo]->GetYaxis()->GetBinLowEdge(2) - hDtProfs[combo]->GetYaxis()->GetBinLowEdge(1));
-    Double_t halfPhiBinWidth = 0.5*(hDtProfs[combo]->GetXaxis()->GetBinLowEdge(2) - hDtProfs[combo]->GetXaxis()->GetBinLowEdge(1));
-    // Double_t halfThetaBinWidth = 0;
-    // Double_t halfPhiBinWidth = 0;
+    // Double_t halfThetaBinWidth = 0.5*(hDtProfs[combo]->GetYaxis()->GetBinLowEdge(2) - hDtProfs[combo]->GetYaxis()->GetBinLowEdge(1));
+    // Double_t halfPhiBinWidth = 0.5*(hDtProfs[combo]->GetXaxis()->GetBinLowEdge(2) - hDtProfs[combo]->GetXaxis()->GetBinLowEdge(1));
+    Double_t halfThetaBinWidth = 0;
+    Double_t halfPhiBinWidth = 0;
 
     // std::cout << halfThetaBinWidth << "\t" << halfPhiBinWidth << std::endl;
 
