@@ -49,7 +49,7 @@ LIBS          = $(ROOTLIBS) -lMathMore -lMinuit -lGpad $(FFTLIBS) $(SYSLIBS) $(L
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 
 #Toggles google performance profile functionality on and off
-#USE_GPERFTOOLS=1
+USE_GPERFTOOLS=1
 
 ifdef USE_GPERFTOOLS
 LDFLAGS	+= -Wl,-no_pie -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
