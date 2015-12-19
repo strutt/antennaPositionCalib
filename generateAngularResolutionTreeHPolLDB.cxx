@@ -36,6 +36,28 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+
+  // Validate Linda's Numbers
+  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
+
+  TString lindaFileName = "newLindaNumbers_LDBHPOL_2015_12_03_time_00_02_44";
+
+
+  TString lindaFileNameTxt = lindaFileName + ".txt";
+  Int_t geomVal = CrossCorrelator::directlyInsertGeometry(lindaFileNameTxt, pol);
+  if(geomVal!=0){
+    std::cerr << "Could not find file " << lindaFileNameTxt.Data() << std::endl;
+    return 1;
+  }
+  geomVal = CrossCorrelator::validateGeometry(lindaFileNameTxt, pol);
+  if(geomVal!=0){
+    std::cerr << "Could not validate Linda's numbers from " << lindaFileNameTxt.Data() << std::endl;
+    return 1;
+  }
+
+
+  CrossCorrelator* cc = new CrossCorrelator();
+  
   // Double_t sourceLat = - (77 + (51.23017/60));
   // Double_t sourceLon = +(167 + (12.16908/60));
   // Double_t sourceAlt = 0;
@@ -83,8 +105,14 @@ int main(int argc, char *argv[])
   calEventChain->SetBranchAddress("event", &calEvent);
   
   OutputConvention oc(argc, argv);
+  oc.setSubdirectory(lindaFileName);
   TString outFileName = oc.getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
+  if(outFile->IsZombie()){
+    std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
+    return 1;
+  }
+
   TTree* angResTree = new TTree("angResTree", "angResTree");
 
   Double_t globalPeak = 0;
@@ -104,7 +132,8 @@ int main(int argc, char *argv[])
   UInt_t triggerTimeNs = 0;
   UInt_t triggerTimeNsExpected = 0;
   Double_t heading = 0;
-  UInt_t l3TrigPattern;
+  UInt_t l3TrigPatternH = 0;
+  Int_t run = 0;
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
   angResTree->Branch("globalPeak", &globalPeak);
@@ -127,11 +156,9 @@ int main(int argc, char *argv[])
   angResTree->Branch("triggerTimeNs", &triggerTimeNs);
   angResTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   angResTree->Branch("heading", &heading);
-  angResTree->Branch("l3TrigPattern", &l3TrigPattern);
+  angResTree->Branch("l3TrigPatternH", &l3TrigPatternH);
   angResTree->Branch("eventNumber", &eventNumber);
-
-  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
-  CrossCorrelator* cc = new CrossCorrelator();
+  angResTree->Branch("run", &run);    
 
   Long64_t nEntries = headChain->GetEntries();
   Long64_t maxEntry = 0; //5000;
@@ -162,13 +189,12 @@ int main(int argc, char *argv[])
       // if(a > minDeltaTriggerTimeNs && a < maxDeltaTriggerTimeNs){
       if(TMath::Abs((triggerTimeNs % Int_t(2e8))-5.135e7) < 5e4){
 	eventNumber = header->eventNumber;
-
+	run = header->run;
 	// std::cout << "eventNumber " << header->eventNumber << std::endl;
       
 	calEventChain->GetEntry(entry);
 	heading = usefulPat.heading;
-	l3TrigPattern = header->l3TrigPattern;
-	l3TrigPattern = header->l3TrigPattern;	
+	l3TrigPatternH = header->l3TrigPatternH;
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
 	globalPhiDeg = usefulEvent->eventNumber;
 	
@@ -183,10 +209,10 @@ int main(int argc, char *argv[])
 	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
 	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
-						       triggeredThetaDeg, l3TrigPattern);
+						       triggeredThetaDeg, l3TrigPatternH);
 
 	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
-						 zoomThetaDeg, l3TrigPattern,
+						 zoomThetaDeg, l3TrigPatternH,
 						 triggeredPhiDeg, triggeredThetaDeg);
 	
 	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
