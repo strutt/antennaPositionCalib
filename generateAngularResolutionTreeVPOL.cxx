@@ -36,6 +36,27 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // Validate Linda's Numbers
+  AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
+  // TString lindaFileName = "newLindaNumbers_LDBHPOL_2015_12_03_time_00_02_44";
+  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53";
+
+
+  TString lindaFileNameTxt = lindaFileName + ".txt";
+  Int_t geomVal = CrossCorrelator::directlyInsertGeometry(lindaFileNameTxt, pol);
+  if(geomVal!=0){
+    std::cerr << "Could not find file " << lindaFileNameTxt.Data() << std::endl;
+    return 1;
+  }
+  geomVal = CrossCorrelator::validateGeometry(lindaFileNameTxt, pol);
+  if(geomVal!=0){
+    std::cerr << "Could not validate Linda's numbers from " << lindaFileNameTxt.Data() << std::endl;
+    return 1;
+  }
+
+
+  CrossCorrelator* cc = new CrossCorrelator();
+
   // Double_t sourceLat = - (77 + (51.23017/60));
   // Double_t sourceLon = +(167 + (12.16908/60));
   // Double_t sourceAlt = 0;
@@ -48,10 +69,10 @@ int main(int argc, char *argv[])
   std::cout << std::endl;
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
-  // const Double_t minDeltaTriggerTimeNs = 24.985e6;
-  // const Double_t maxDeltaTriggerTimeNs = 25.005e6;
-  const Double_t minDeltaTriggerTimeNs = 24.994e6;
-  const Double_t maxDeltaTriggerTimeNs = 25.003e6;
+  const Double_t minDeltaTriggerTimeNs = 24.985e6;
+  const Double_t maxDeltaTriggerTimeNs = 25.005e6;
+  // const Double_t minDeltaTriggerTimeNs = 24.994e6;
+  // const Double_t maxDeltaTriggerTimeNs = 25.003e6;
 
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
@@ -83,8 +104,15 @@ int main(int argc, char *argv[])
   calEventChain->SetBranchAddress("event", &calEvent);
   
   OutputConvention oc(argc, argv);
+  oc.setSubdirectory(lindaFileName);
   TString outFileName = oc.getOutputFileName();
+  
   TFile* outFile = new TFile(outFileName, "recreate");
+  if(outFile->IsZombie()){
+    std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
+    return 1;
+  }
+  
   TTree* angResTree = new TTree("angResTree", "angResTree");
 
   Double_t globalPeak = 0;
@@ -104,7 +132,8 @@ int main(int argc, char *argv[])
   UInt_t triggerTimeNs = 0;
   UInt_t triggerTimeNsExpected = 0;
   Double_t heading = 0;
-  UInt_t l3TrigPattern;
+  UInt_t l3TrigPattern = 0;
+  Int_t run = 0;  
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
   angResTree->Branch("globalPeak", &globalPeak);
@@ -129,9 +158,8 @@ int main(int argc, char *argv[])
   angResTree->Branch("heading", &heading);
   angResTree->Branch("l3TrigPattern", &l3TrigPattern);
   angResTree->Branch("eventNumber", &eventNumber);
+  angResTree->Branch("run", &run);  
 
-  AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
-  CrossCorrelator* cc = new CrossCorrelator();
 
   Long64_t nEntries = headChain->GetEntries();
   Long64_t maxEntry = 0; //5000;
@@ -149,10 +177,8 @@ int main(int argc, char *argv[])
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
       triggerTimeNs = header->triggerTimeNs;
-
       Int_t a = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected) - 0.0005e6; // + 0.003e8;
       a = a%Int_t(1999969e2);
-      
       if(a > 67.5e6){
       	a -= 50.0012e6;
       }
@@ -162,13 +188,12 @@ int main(int argc, char *argv[])
       if(a > minDeltaTriggerTimeNs && a < maxDeltaTriggerTimeNs){
       // if(true){
 	eventNumber = header->eventNumber;
-
+	run = header->run;
 	// std::cout << "eventNumber " << header->eventNumber << std::endl;
-      
+
 	calEventChain->GetEntry(entry);
 	heading = usefulPat.heading;
 	l3TrigPattern = header->l3TrigPattern;
-	l3TrigPattern = header->l3TrigPattern;	
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
 	globalPhiDeg = usefulEvent->eventNumber;
 	
