@@ -237,7 +237,6 @@ int main(int argc, char *argv[])
 	angResTree->Fill();
 
 	delete usefulEvent;
-	
       }
     }
     p++;

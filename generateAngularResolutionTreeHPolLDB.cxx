@@ -4,7 +4,7 @@
  Email: b.strutt.12@ucl.ac.uk
 
  Description:
-             Program to find peak cross correlation offsets between antenna pairs in pulses from Wais Divide.
+             Program to find peak cross correlation offsets between antenna pairs in pulses from LDB.
 *************************************************************************************************************** */
 
 #include "TFile.h"

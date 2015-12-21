@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
 
   // Validate Linda's Numbers
   AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
-  // TString lindaFileName = "newLindaNumbers_LDBHPOL_2015_12_03_time_00_02_44";
-  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53";
+
+  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_17_time_17_41_28";
 
 
   TString lindaFileNameTxt = lindaFileName + ".txt";
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
   }
 
 
-  CrossCorrelator* cc = new CrossCorrelator();
-
+  CrossCorrelator* cc = new CrossCorrelator();  
+  
   // Double_t sourceLat = - (77 + (51.23017/60));
   // Double_t sourceLon = +(167 + (12.16908/60));
   // Double_t sourceAlt = 0;
@@ -69,8 +69,9 @@ int main(int argc, char *argv[])
   std::cout << std::endl;
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
-  const Double_t minDeltaTriggerTimeNs = 24.985e6;
-  const Double_t maxDeltaTriggerTimeNs = 25.005e6;
+  const Int_t cutTimeNs = 60e3;
+  // const Double_t minDeltaTriggerTimeNs = 24.985e6;
+  // const Double_t maxDeltaTriggerTimeNs = 25.005e6;
   // const Double_t minDeltaTriggerTimeNs = 24.994e6;
   // const Double_t maxDeltaTriggerTimeNs = 25.003e6;
 
@@ -88,11 +89,11 @@ int main(int argc, char *argv[])
   // }
 
   for(Int_t run=firstRun; run<=lastRun; run++){
-    TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+    TString fileName = TString::Format("/unix/anita3/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
-    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);
+    fileName = TString::Format("/unix/anita3/flight1415/root/run%d/gpsFile%d.root", run, run);
     gpsChain->Add(fileName);
-    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
+    fileName = TString::Format("/unix/anita3/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
   }
   RawAnitaHeader* header = NULL;
@@ -160,9 +161,33 @@ int main(int argc, char *argv[])
   angResTree->Branch("eventNumber", &eventNumber);
   angResTree->Branch("run", &run);  
 
+  UInt_t timedelay[10];
+  Int_t shortdelay = 3150;
+  int ndelays = -1;
+  Int_t deltaTns_corr[5];
+  if (pol==AnitaPol::kVertical){
+    timedelay[0] = 25e6;
+    timedelay[1] = 225e6;
+    timedelay[2] = 425e6;
+    timedelay[3] = 625e6;
+    timedelay[4] = 825e6; // in ms
+    if (firstRun>153){
+      timedelay[0] =  50e6;
+      timedelay[1] = 250e6;
+      timedelay[2] = 450e6;
+      timedelay[3] = 650e6;
+      timedelay[4] = 850e6;
+    }
+    ndelays = 5;
+
+  } 
+
+  Long64_t timedelay_corr[10];
+  for (int i=0;i<ndelays;++i) timedelay_corr[i]= timedelay[i] - i*shortdelay;
+
 
   Long64_t nEntries = headChain->GetEntries();
-  Long64_t maxEntry = 0; //5000;
+  Long64_t maxEntry = 0;//5000;
   Long64_t startEntry = 0;
   if(maxEntry<=0 || maxEntry > nEntries) maxEntry = nEntries;
   std::cout << "Processing " << maxEntry << " of " << nEntries << " entries." << std::endl;
@@ -177,15 +202,28 @@ int main(int argc, char *argv[])
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
       triggerTimeNs = header->triggerTimeNs;
-      Int_t a = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected) - 0.0005e6; // + 0.003e8;
-      a = a%Int_t(1999969e2);
-      if(a > 67.5e6){
-      	a -= 50.0012e6;
+
+      Long64_t minDeltaT = 1e11;
+      for (int i=0;i<ndelays;++i){
+	deltaTns_corr[i]= triggerTimeNsExpected+timedelay_corr[i];
+	if (deltaTns_corr[i]>1e9) deltaTns_corr[i]-=1e9;
+	deltaTns_corr[i] = deltaTns_corr[i] - triggerTimeNs;
+	if ( TMath::Abs(deltaTns_corr[i]) < TMath::Abs(minDeltaT) ){
+	  minDeltaT = deltaTns_corr[i];
+	}
       }
-      else if(a > 27.5e6){
-      	a -= 25e6;
-      }
-      if(a > minDeltaTriggerTimeNs && a < maxDeltaTriggerTimeNs){
+      
+     if(TMath::Abs(minDeltaT) < cutTimeNs){
+
+      // Int_t a = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected) - 0.0005e6; // + 0.003e8;
+      // a = a%Int_t(1999969e2);
+      // if(a > 67.5e6){
+      // 	a -= 50.0012e6;
+      // }
+      // else if(a > 27.5e6){
+      // 	a -= 25e6;
+      // }
+      // if(a > minDeltaTriggerTimeNs && a < maxDeltaTriggerTimeNs){
       // if(true){
 	eventNumber = header->eventNumber;
 	run = header->run;
