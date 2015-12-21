@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
   // Validate Linda's Numbers
   AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
 
-  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_17_time_17_41_28";
+  // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_17_time_17_41_28";
+  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53";
 
 
   TString lindaFileNameTxt = lindaFileName + ".txt";
@@ -89,11 +90,11 @@ int main(int argc, char *argv[])
   // }
 
   for(Int_t run=firstRun; run<=lastRun; run++){
-    TString fileName = TString::Format("/unix/anita3/flight1415/root/run%d/headFile%d.root", run, run);
+    TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
-    fileName = TString::Format("/unix/anita3/flight1415/root/run%d/gpsFile%d.root", run, run);
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);
     gpsChain->Add(fileName);
-    fileName = TString::Format("/unix/anita3/flight1415/root/run%d/calEventFile%d.root", run, run);
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
   }
   RawAnitaHeader* header = NULL;
