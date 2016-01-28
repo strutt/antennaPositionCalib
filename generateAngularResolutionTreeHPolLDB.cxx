@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
-    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run);
+    // fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run); 
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);   
     gpsChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
   headChain->SetBranchAddress("header", &header);  
   Adu5Pat* pat = NULL;
   gpsChain->SetBranchAddress("pat", &pat);
-  // gpsChain->BuildIndex("realTime");  
+  gpsChain->BuildIndex("realTime");  
   CalibratedAnitaEvent* calEvent = NULL;
   calEventChain->SetBranchAddress("event", &calEvent);
   
@@ -126,7 +127,7 @@ int main(int argc, char *argv[])
   Int_t run = 0;
   Double_t mrms = 0;
   Double_t brms = 0;
-  Double_t realTime = 0;    
+  UInt_t realTime = 0;    
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
   angResTree->Branch("globalPeak", &globalPeak);
@@ -169,7 +170,8 @@ int main(int argc, char *argv[])
   Int_t maxToSave = 5;
   for(Long64_t entry = startEntry; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
-    gpsChain->GetEntry(entry);    
+    gpsChain->GetEntryWithIndex(header->realTime);
+    // gpsChain->GetEntry(entry);
     if((header->trigType & 1)==1){
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
