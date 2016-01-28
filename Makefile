@@ -49,7 +49,7 @@ LIBS          = $(ROOTLIBS) -lMathMore -lMinuit -lGpad $(FFTLIBS) $(SYSLIBS) $(L
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 
 #Toggles google performance profile functionality on and off
-USE_GPERFTOOLS=1
+#USE_GPERFTOOLS=1
 
 ifdef USE_GPERFTOOLS
 LDFLAGS	+= -Wl,-no_pie -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
@@ -75,24 +75,18 @@ OBJS =
 BINARIES = findWaisPulserEvents findSeaveyPulses generateDeltaTTree generateDeltaTTreeVPOL generateDeltaTLookupHistograms compareMeasuredWithExpectedDeltaTs compareMeasuredWithExpectedDeltaTsFull generateAngularResolutionTree generateAngularResolutionTreeVPOL generateAngularResolutionTreeHPolLDB quickCheckThetaPhiExpected fitPitchRollOffsets fitPitchRollOffsetsNew generateAngularResolutionTreeFriend fitPitchRollOffsetsMinuit
 
 #Now the bits we're actually compiling
-all: $(OBJS) $(BINARIES) commit
+all: $(OBJS) $(BINARIES)
 
-.PHONY: commit clean
+.PHONY: clean
 
 $(BINARIES): %: %.$(SRCSUF) #$(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
 	@echo $<
 	-$(LD) $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIBS) $< -o $@
-ifdef FORCE_GIT
-	-@if test $$? == 0; then git add $<; fi
-endif
 
 %.$(OBJSUF) : %.$(SRCSUF) %.h
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-ifdef FORCE_GIT	
-	@if test $$? == 0; then git add $^; fi
-endif
 
 clean:
 	@rm -f *Dict*
@@ -102,11 +96,3 @@ clean:
 	@rm -f $(OBJS)
 	@rm -f $(BINARIES)
 
-commit: 
-ifdef FORCE_GIT
-	-@git add Makefile
-	-@git commit
-endif
-
-check-syntax:
-	gcc -o nul -S ${CHK_SOURCES}

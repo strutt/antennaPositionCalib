@@ -4,7 +4,7 @@
  Email: b.strutt.12@ucl.ac.uk
 
  Description:
-             Program to find peak cross correlation offsets between antenna pairs in pulses from Wais Divide.
+             Program to reconstruct VPol pulses from Wais Divide.
 *************************************************************************************************************** */
 
 #include "TFile.h"
@@ -43,55 +43,41 @@ int main(int argc, char *argv[])
   const Int_t lastRun = firstRun; //argc==3 ? atoi(argv[2]) : firstRun;
   const Double_t maxDeltaTriggerTimeNs = 1200;
 
-  // Double_t phiBefore[NUM_SEAVEYS];
-  // Double_t phiAfter[NUM_SEAVEYS];  
-  // AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  // for(int ant=0; ant<NUM_SEAVEYS; ant++){
-  //   phiBefore[ant] = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::kVertical);
-  //   // phiBefore[ant] += TMath::DegToRad()*45;
-  // }
-
-  // Validate Linda's Numbers
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 
-  // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_2015_12_06_time_18_23_32"; 
-  TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_2015_12_17_time_18_22_28";
+  // Photogrammetry positions
+  // AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  // geom->useKurtAnita3Numbers(1);
+  // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  // for(Int_t surf=0; surf<NUM_SURF; surf++){
+  //   for(Int_t chan=0; chan<NUM_CHAN; chan++){
+  //     cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
+  //   }
+  // }
 
-  TString lindaFileNameTxt = lindaFileName + ".txt";
-  Int_t geomVal = CrossCorrelator::directlyInsertGeometry(lindaFileNameTxt, pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_2015_12_17_time_18_22_28.txt", pol);  
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_LDBHPOL_2015_12_17_time_17_38_21.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_LDBHPOL_2016_01_11_time_11_40_27.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_LDBHPOL_2016_01_11_time_14_42_08.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_2015_10_13_time_14_30_54.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_2016_01_11_time_16_01_54.txt" pol);  
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW3_2016_01_11_time_19_30_31.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW8_2016_01_18_time_17_10_01.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW7_2016_01_18_time_18_18_35.txt", pol);
+  CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW10_2016_01_19_time_15_02_11.txt", pol);
   
-  if(geomVal!=0){
-    std::cerr << "Could not find file " << lindaFileNameTxt.Data() << std::endl;
-    return 1;
-  }
-  geomVal = CrossCorrelator::validateGeometry(lindaFileNameTxt, pol);
-  if(geomVal!=0){
-    std::cerr << "Could not validate Linda's numbers from " << lindaFileNameTxt.Data() << std::endl;
-    return 1;
-  }
   
-
   CrossCorrelator* cc = new CrossCorrelator();
-
-  cc->insertPhotogrammetryGeometry();
-  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
-  for(Int_t surf=0; surf<NUM_SURF; surf++){
-    for(Int_t chan=0; chan<NUM_CHAN; chan++){
-      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
-    }
-  }
-
-  
-  // Get input
 
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
+
   
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
-    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run);
     gpsChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
@@ -100,12 +86,11 @@ int main(int argc, char *argv[])
   headChain->SetBranchAddress("header", &header);  
   Adu5Pat* pat = NULL;
   gpsChain->SetBranchAddress("pat", &pat);
-  gpsChain->BuildIndex("realTime");  
+  // gpsChain->BuildIndex("realTime");  
   CalibratedAnitaEvent* calEvent = NULL;
   calEventChain->SetBranchAddress("event", &calEvent);
   
   OutputConvention oc(argc, argv);
-  // oc.setSubdirectory("photogrammetryPositions");
   TString outFileName = oc.getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
   if(outFile->IsZombie()){
@@ -132,8 +117,12 @@ int main(int argc, char *argv[])
   UInt_t triggerTimeNs = 0;
   UInt_t triggerTimeNsExpected = 0;
   Double_t heading = 0;
+  UInt_t l3TrigPattern = 0;  
   UInt_t l3TrigPatternH = 0;
   Int_t run=0;
+  Double_t mrms = 0;
+  Double_t brms = 0;
+  Double_t realTime = 0;    
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
   angResTree->Branch("globalPeak", &globalPeak);
@@ -156,9 +145,14 @@ int main(int argc, char *argv[])
   angResTree->Branch("triggerTimeNs", &triggerTimeNs);
   angResTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   angResTree->Branch("heading", &heading);
+  angResTree->Branch("l3TrigPattern", &l3TrigPattern);  
   angResTree->Branch("l3TrigPatternH", &l3TrigPatternH);
   angResTree->Branch("eventNumber", &eventNumber);
   angResTree->Branch("run", &run);  
+
+  angResTree->Branch("mrms", &mrms);
+  angResTree->Branch("brms", &brms);
+  angResTree->Branch("realTime", &realTime);  
   
   Long64_t nEntries = headChain->GetEntries();
   Long64_t maxEntry = 0; //5000;
@@ -172,9 +166,8 @@ int main(int argc, char *argv[])
   for(Long64_t entry = startEntry; entry < maxEntry; entry++){
 
     headChain->GetEntry(entry);
-    // if(header->eventNumber != 60832108) continue;
-    gpsChain->GetEntryWithIndex(header->realTime);
-    if((header->trigType & 1)==1){// && header->eventNumber < 60.95e6 && header->eventNumber > 60.85e6){
+    gpsChain->GetEntry(entry);    
+    if((header->trigType & 1)==1){
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getWaisDivideTriggerTimeNs();
       triggerTimeNs = header->triggerTimeNs;
@@ -186,6 +179,10 @@ int main(int argc, char *argv[])
 	
 	calEventChain->GetEntry(entry);
 	heading = usefulPat.heading;
+	mrms = usefulPat.mrms;
+	brms = usefulPat.brms;
+	realTime = header->realTime;
+	l3TrigPattern = header->l3TrigPattern;	
 	l3TrigPatternH = header->l3TrigPatternH;
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
 	globalPhiDeg = usefulEvent->eventNumber;
@@ -194,7 +191,7 @@ int main(int argc, char *argv[])
 	phiExpected*=TMath::RadToDeg();
 	thetaExpected*=-1*TMath::RadToDeg();
 
-	cc->correlateEvent(usefulEvent, AnitaPol::kHorizontal);
+	cc->correlateEvent(usefulEvent, pol);
 
 	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
