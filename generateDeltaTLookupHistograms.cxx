@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
   const Int_t numCombos = NUM_COMBOS;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
+  geom->useKurtAnita3Numbers(1);
   
   CrossCorrelator* cc = new CrossCorrelator();
   std::vector<Int_t> combos;

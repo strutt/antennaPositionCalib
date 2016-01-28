@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
   
   TFile* fInputFile = TFile::Open("generateDeltaTLookupHistogramsPlots.root");
   geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
+  geom->useKurtAnita3Numbers(1);
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
   for(int surf=0; surf<12; surf++){
     for(int chan=0; chan < 9; chan++){

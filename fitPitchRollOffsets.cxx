@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   numCalls = 0;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);  
+  geom->useKurtAnita3Numbers(1);  
 
   TChain* chain = new TChain("angResTree");
   TChain* chain2 = new TChain("angResTreeFriend");  

@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   std::cout << std::endl;
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
-  const Int_t cutTimeNs = 60e3;
+  const Int_t cutTimeNs = Int_t(60e3);
   // const Double_t minDeltaTriggerTimeNs = 24.985e6;
   // const Double_t maxDeltaTriggerTimeNs = 25.005e6;
   // const Double_t minDeltaTriggerTimeNs = 24.994e6;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
   TChain* calEventChain = new TChain("eventTree");
 
   // AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  // geom->useKurtAnitaIIINumbers(1);
+  // geom->useKurtAnita3Numbers(1);
   // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
   // for(int surf=0; surf<NUM_SURF; surf++){
   //   for(int chan=0; chan<NUM_CHAN; chan++){
@@ -106,7 +106,6 @@ int main(int argc, char *argv[])
   calEventChain->SetBranchAddress("event", &calEvent);
   
   OutputConvention oc(argc, argv);
-  oc.setSubdirectory(lindaFileName);
   TString outFileName = oc.getOutputFileName();
   
   TFile* outFile = new TFile(outFileName, "recreate");
@@ -167,17 +166,17 @@ int main(int argc, char *argv[])
   int ndelays = -1;
   Int_t deltaTns_corr[5];
   if (pol==AnitaPol::kVertical){
-    timedelay[0] = 25e6;
-    timedelay[1] = 225e6;
-    timedelay[2] = 425e6;
-    timedelay[3] = 625e6;
-    timedelay[4] = 825e6; // in ms
+    timedelay[0] = Int_t(25e6);
+    timedelay[1] = Int_t(225e6);
+    timedelay[2] = Int_t(425e6);
+    timedelay[3] = Int_t(625e6);
+    timedelay[4] = Int_t(825e6); // in ms
     if (firstRun>153){
-      timedelay[0] =  50e6;
-      timedelay[1] = 250e6;
-      timedelay[2] = 450e6;
-      timedelay[3] = 650e6;
-      timedelay[4] = 850e6;
+      timedelay[0] = Int_t(50e6);
+      timedelay[1] = Int_t(250e6);
+      timedelay[2] = Int_t(450e6);
+      timedelay[3] = Int_t(650e6);
+      timedelay[4] = Int_t(850e6);
     }
     ndelays = 5;
 
@@ -204,10 +203,10 @@ int main(int argc, char *argv[])
       triggerTimeNsExpected = usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
       triggerTimeNs = header->triggerTimeNs;
 
-      Long64_t minDeltaT = 1e11;
+      Long64_t minDeltaT = Long64_t(1e11);
       for (int i=0;i<ndelays;++i){
 	deltaTns_corr[i]= triggerTimeNsExpected+timedelay_corr[i];
-	if (deltaTns_corr[i]>1e9) deltaTns_corr[i]-=1e9;
+	if (deltaTns_corr[i]>Int_t(1e9)) deltaTns_corr[i]-=Int_t(1e9);
 	deltaTns_corr[i] = deltaTns_corr[i] - triggerTimeNs;
 	if ( TMath::Abs(deltaTns_corr[i]) < TMath::Abs(minDeltaT) ){
 	  minDeltaT = deltaTns_corr[i];

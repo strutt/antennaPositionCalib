@@ -69,22 +69,17 @@ int main(int argc, char *argv[])
     std::cerr << "Could not validate Linda's numbers from " << lindaFileNameTxt.Data() << std::endl;
     return 1;
   }
-
-  // for(int ant=0; ant<NUM_SEAVEYS; ant++){
-  //   phiAfter[ant] = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::kVertical);
-  //   // phiAfter[ant] += TMath::DegToRad()*45;    
-
-  //   if(ant==47){
-  //     std::cout << phiBefore[ant] << "\t" << phiAfter[ant] << "\t" << phiBefore[ant] - phiAfter[ant] << std::endl;
-  //     std::cout << "geom = " << geom << std::endl;
-  //   }
-  // }
-
   
 
-  CrossCorrelator* cc = new CrossCorrelator();  
-  // std::cout << "in cc round 2, " << cc->phiArrayDeg[AnitaPol::kVertical][47]*TMath::DegToRad() << std::endl;
-  // return 0;
+  CrossCorrelator* cc = new CrossCorrelator();
+
+  cc->insertPhotogrammetryGeometry();
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  for(Int_t surf=0; surf<NUM_SURF; surf++){
+    for(Int_t chan=0; chan<NUM_CHAN; chan++){
+      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
+    }
+  }
 
   
   // Get input
@@ -110,7 +105,7 @@ int main(int argc, char *argv[])
   calEventChain->SetBranchAddress("event", &calEvent);
   
   OutputConvention oc(argc, argv);
-  oc.setSubdirectory(lindaFileName);
+  // oc.setSubdirectory("photogrammetryPositions");
   TString outFileName = oc.getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
   if(outFile->IsZombie()){

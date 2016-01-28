@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
 
   geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
+  geom->useKurtAnita3Numbers(1);
 
   deltaTChain = new TChain("deltaTTree");
   for(Int_t run=firstRun; run<=lastRun; run++){

@@ -2,9 +2,10 @@
 
 void drawGenerateAngularResolutionTreeVPOL(){
   // gStyle->SetOptFit(0000);
-  gStyle->SetOptStat(1111);  
+  gStyle->SetOptStat("mre");  
 
-  auto f = TFile::Open("newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53/generateAngularResolutionTreeVPOLPlots_152_2015-12-19_00-08-43.root");
+  // auto f = TFile::Open("newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53/generateAngularResolutionTreeVPOLPlots_152_2015-12-19_00-08-43.root");
+  auto f = TFile::Open("newLindaNumbers_4steps_VPOL_10kVSeavey_2015_12_07_time_18_18_53/generateAngularResolutionTreeVPOLPlots_152_2015-12-21_19-01-00.root");
   auto c1 = new TCanvas();
   auto t = (TTree*) f->Get("angResTree");
   t->Draw("deltaPhiDeg");
@@ -12,7 +13,6 @@ void drawGenerateAngularResolutionTreeVPOL(){
   UInt_t eventNumber;  
   t->SetBranchAddress("deltaPhiDeg", &deltaPhiDeg);
   t->SetBranchAddress("eventNumber", &eventNumber);  
-  
 
   auto fHeader = TFile::Open("~/UCL/ANITA/flight1415/root/run152/headFile152.root");
   auto tHeader = (TTree*) fHeader->Get("headTree");
@@ -32,10 +32,11 @@ void drawGenerateAngularResolutionTreeVPOL(){
   Double_t minTime = 1418940809;
   Double_t maxTime = 1418945220;
 
-  const Int_t numTimeBins = 2048;
+  // const Int_t numTimeBins = 2048;
+  const Int_t numTimeBins = 1024;  
 
   // TH2D* h = new TH2D("h", "h", numTimeBins, -10, 10, 2, 0, 2);
-  TH2D* h = new TH2D("h", "h", numTimeBins, minTime, maxTime+1, numTimeBins, -10, 10); 
+  TH2D* hDeltaHeadingVsTime = new TH2D("hDeltaHeadingVsTime", "Heading vs Time - run 152; Time of day; #deltaHeading (Degrees)", numTimeBins, minTime, maxTime+1, numTimeBins, -10, 10); 
   TH2D* hRawHeading = new TH2D("hRawHeading", "hRawHeading", numTimeBins, minTime, maxTime+1, numTimeBins, 0, numTimeBins);      
 
   Double_t lastHeading = 0;
@@ -58,7 +59,7 @@ void drawGenerateAngularResolutionTreeVPOL(){
       deltaHeading += 360;
     }
 
-    h->Fill(pat->realTime, deltaHeading);
+    hDeltaHeadingVsTime->Fill(pat->realTime, deltaHeading);
        
     
     lastHeading = pat->heading;
@@ -67,13 +68,17 @@ void drawGenerateAngularResolutionTreeVPOL(){
   // tPat->Draw("pat->attFlag");
 
 
-  h->Draw("colz");
-  auto h2 = h->ProfileX();
+  hDeltaHeadingVsTime->GetXaxis()->SetTimeDisplay(1);
+  hDeltaHeadingVsTime->Draw("colz");
+
+  new TCanvas();
+
+  hDeltaHeadingVsTime->Draw("colz");  
+  auto h2 = hDeltaHeadingVsTime->ProfileX();
   h2->Draw("same");
 
-
   
-  // TF1* f1 = new TF1("fit", TString::Format("[0]+[1]*sin([2]*(x-%lf) + [3])", h->GetXaxis()->GetBinLowEdge(1));)
+  // TF1* f1 = new TF1("fit", TString::Format("[0]+[1]*sin([2]*(x-%lf) + [3])", hDeltaHeadingVsTime->GetXaxis()->GetBinLowEdge(1));)
   TF1* f1 = new TF1("fit", TString::Format("[0]+[1]*sin([2]*(x-%lf) + [3]) + [4]*sin([5]*(x-%lf) + [6])",
 					   minTime, minTime));
 
@@ -82,7 +87,7 @@ void drawGenerateAngularResolutionTreeVPOL(){
   TF1* f1Int = new TF1("fitInt", TString::Format("[7] + [0]*(x-%lf) -[1]*cos([2]*(x-%lf)+[3])/[2] - [4]*cos([5]*(x-%lf)+[6])/[5]", minTime, minTime, minTime));
 
   
-  f1->SetParameter(0, h->ProjectionY()->GetMean());
+  f1->SetParameter(0, hDeltaHeadingVsTime->ProjectionY()->GetMean());
   f1->SetParameter(1, 0.2);
   // f1->SetParameter(2, 1./120);
   f1->SetParameter(2, TMath::TwoPi()/120);
@@ -173,11 +178,16 @@ void drawGenerateAngularResolutionTreeVPOL(){
   }
 
   double* filteredGrVals = FFTtools::doInvFFT(gr->GetN(), theFFT);
+  
   auto gr3 = new TGraph(gr->GetN(), gr->GetX(), filteredGrVals);
+  
+  
   new TCanvas();
   h5->Draw();
   gr3->SetLineColor(kBlue);
   gr3->Draw("lsame");
+
+  // return;
 
   TGraph* grHeading = new TGraph();
   grHeading->SetPoint(0, minTime, firstHeading);
@@ -185,12 +195,16 @@ void drawGenerateAngularResolutionTreeVPOL(){
   TGraph* grHeading3 = new TGraph();  
   UInt_t evalTime = minTime;
 
-  const Double_t fitTimeMins = 5;
+  const Double_t fitTimeMins = 10;
   std::vector<TF1*> fits;
   std::vector<TF1*> theFitInts;  
   Double_t startFitTime = minTime;
   Double_t endFitTime = minTime + fitTimeMins*60;
   Int_t numFits = 0;
+
+  TGraph* grFitIndex = new TGraph();
+  TGraph* grFitChisquare = new TGraph();  
+  
   while(startFitTime < maxTime){
 
     fits.push_back(0);
@@ -198,6 +212,10 @@ void drawGenerateAngularResolutionTreeVPOL(){
     auto theFit  = (TF1*) f2->Clone();
     fits.at(numFits) = theFit;
     theFit->SetRange(startFitTime, endFitTime);
+    for(int param=0; param<=6; param++){
+      if(param==1 || param==4 || param==3 || param == 6) continue;
+      theFit->FixParameter(param, theFit->GetParameter(param));
+    }
     h5->Fit(theFit, "QR0");//, startFitTime, endFitTime);
 
     startFitTime += 0.5*fitTimeMins*60;
@@ -213,7 +231,7 @@ void drawGenerateAngularResolutionTreeVPOL(){
     theFitInts.at(numFits) = theFitInt;
     for(int param=0; param<=6; param++){
       theFitInt->FixParameter(param, theFit->GetParameter(param));
-      cout << param << "\t" << theFit->GetParameter(param) << "\t" << theFitInt->GetParameter(param) << endl;
+      // cout << param << "\t" << theFit->GetParameter(param) << "\t" << theFitInt->GetParameter(param) << endl;
     }
     Double_t thisMinTime, thisMaxTime;
     theFit->GetRange(thisMinTime, thisMaxTime);
@@ -226,13 +244,16 @@ void drawGenerateAngularResolutionTreeVPOL(){
     hRawHeading_px->Fit(theFitInt, "RQ0");//, thisMinTime, thisMaxTime);
     
     theFitInt->Draw("l");
-    hRawHeading->Draw("samecolz");    
+    hRawHeading->Draw("samecolz");
     hRawHeading_px->Draw("same");
     // g->Draw("lsame");
 
-    numFits++;
-
+    UInt_t startEvalTime = evalTime;
     while(evalTime < endFitTime - 0.33*fitTimeMins*60){
+      Int_t theBin = hRawHeading_px->FindBin(evalTime);
+      Double_t thisBinChiSq = pow(hRawHeading_px->GetBinContent(theBin) - theFitInt->Eval(evalTime), 2);
+      
+      
       Double_t lastHeading = grHeading->GetY()[grHeading->GetN()-1];
       Double_t deltaHeading = theFit->Eval(evalTime);
       grHeading->SetPoint(grHeading->GetN(), evalTime, lastHeading + deltaHeading);
@@ -248,9 +269,36 @@ void drawGenerateAngularResolutionTreeVPOL(){
 
       evalTime++;      
     }
-    cout << UInt_t(startFitTime) << "\t" << evalTime << "\t" << UInt_t(endFitTime) << "\t" << numFits << endl;
+
+    evalTime = startEvalTime;
+    while(evalTime < endFitTime - 0.33*fitTimeMins*60){
+      grFitIndex->SetPoint(grFitIndex->GetN(), evalTime, numFits);
+      grFitChisquare->SetPoint(grFitChisquare->GetN(), evalTime, theFit->GetChisquare()/theFit->GetNDF());
+      
+      Double_t lastHeading = grHeading->GetY()[grHeading->GetN()-1];
+      Double_t deltaHeading = theFit->Eval(evalTime);
+      grHeading->SetPoint(grHeading->GetN(), evalTime, lastHeading + deltaHeading);
+
+      Double_t betterHeading = theFitInt->Eval(evalTime);
+      while(betterHeading >= 360){
+	betterHeading -=360;
+      }
+      while(betterHeading < 0){
+	betterHeading +=360;
+      }
+      grHeading2->SetPoint(grHeading2->GetN(), evalTime, betterHeading);
+
+      evalTime++;      
+    }
+    // cout << UInt_t(startFitTime) << "\t" << evalTime << "\t" << UInt_t(endFitTime) << "\t" << numFits << endl;
+    numFits++;        
   }
-  // return;
+  new TCanvas();
+  grFitIndex->Draw();
+  new TCanvas();
+  grFitChisquare->Draw();
+  return;
+
   
   for(Long64_t entry=0; entry<tPat->GetEntries(); entry++){
     tPat->GetEntry(entry);
@@ -278,16 +326,21 @@ void drawGenerateAngularResolutionTreeVPOL(){
   }
   new TCanvas();
 
-  tPat->Draw("heading:realTime", "heading > -50", "colz");
+  TH2D* hHeadingVsTime = new TH2D("hHeadingVsTime", "Heading as function of time - run 152; Time of day; Heading (Degrees)", numTimeBins, minTime, maxTime+1, 360, 0, 360);
+  hHeadingVsTime->GetXaxis()->SetTimeDisplay(1);
+  tPat->Draw("heading:realTime>>hHeadingVsTime", "heading > -50", "colz");
+
+  new TCanvas();
+  hHeadingVsTime->Draw("colz");
   // grHeading->SetLineColor(kMagenta);
   grHeading->SetLineWidth(2);
   grHeading->Draw("lsame");
   grHeading2->Draw("lsame");  
   // return 0;
   
-  TH2D* h0 = new TH2D("h0", "h0", 128, -10, 10, 128, -20, 20);
-  TH2D* h01 = new TH2D("h01", "h01", numTimeBins, minTime, maxTime, 128, -20, 20);
-  TH2D* h02 = new TH2D("h02", "h02", numTimeBins, minTime, maxTime, 128, -20, 20);
+  TH2D* h0 = new TH2D("h0", "h0", 128, -10, 10, 128, -10, 10);
+  TH2D* h01 = new TH2D("h01", "h01", numTimeBins, minTime, maxTime, 128, -10, 10);
+  TH2D* hDeltaPhiDegVsTime = new TH2D("hDeltaPhiDegVsTime", "hDeltaPhiDegVsTime", numTimeBins, minTime, maxTime, 128, -10, 10);
   
   // TH2D* h = new TH2D("h", "h", numTimeBins, -10, 10, 2, 0, 2);
 
@@ -301,18 +354,18 @@ void drawGenerateAngularResolutionTreeVPOL(){
     Double_t deltaHeading =  newHeading - pat->heading;
     h0->Fill(deltaPhiDeg, deltaHeading);
     h01->Fill(header->realTime, deltaHeading);
-    h02->Fill(header->realTime, deltaPhiDeg);
+    hDeltaPhiDegVsTime->Fill(header->realTime, deltaPhiDeg);
   }
   auto c0c = new TCanvas();
   h0->Draw("colz");
   c0c->SetLogz(1);
   new TCanvas();
   h01->Draw("colz");
-  auto h02_px = h02->ProfileX();
-  h02_px->Draw("samehist");
-  h02_px->SetLineColor(kRed);  
+  auto hDeltaPhiDegVsTime_px = hDeltaPhiDegVsTime->ProfileX();
+  hDeltaPhiDegVsTime_px->Draw("samehist");
+  hDeltaPhiDegVsTime_px->SetLineColor(kRed);  
   new TCanvas();
-  h02->Draw("colz");
+  hDeltaPhiDegVsTime->Draw("colz");
   auto h01_px = h01->ProfileX();
   h01_px->SetLineColor(kMagenta);
   h01_px->SetLineWidth(2);  
@@ -332,10 +385,10 @@ void drawGenerateAngularResolutionTreeVPOL(){
   grDeltaHeadingDer2->Draw("alp");
 
 
-  TH2D* h03 = new TH2D("h03", "h03", numTimeBins, minTime, maxTime+1, 128, -20, 20);
-  TH2D* h04 = new TH2D("h04", "h04", numTimeBins, minTime, maxTime, 128, -20, 20);
-  TH2D* h05 = new TH2D("h05", "h05", numTimeBins, minTime, maxTime, 128, -20, 20);
-  TH2D* h06 = new TH2D("h06", "h06", numTimeBins, minTime, maxTime, 128, -20, 20);
+  TH2D* h03 = new TH2D("h03", "h03", numTimeBins, minTime, maxTime+1, 128, -10, 10);
+  TH2D* h04 = new TH2D("h04", "h04", numTimeBins, minTime, maxTime, 128, -10, 10);
+  TH2D* h05 = new TH2D("h05", "h05", numTimeBins, minTime, maxTime, 128, -10, 10);
+  TH2D* h06 = new TH2D("h06", "h06", numTimeBins, minTime, maxTime, 128, -10, 10);
   
   const Double_t deltaBadTime = 60;
   UInt_t lastBadTime = -1;
@@ -365,6 +418,9 @@ void drawGenerateAngularResolutionTreeVPOL(){
     }
 
     h04->Fill(header->realTime, deltaBetterHeading);
+    if(TMath::Abs(deltaPhiDeg) > 5){
+      std::cout << "Badly reconstructed " << header->eventNumber << endl;
+    }
     h05->Fill(header->realTime, deltaPhiDeg+deltaBetterHeading);
 
     if(TMath::Abs(deltaBetterHeading) >= 2.5){
@@ -400,12 +456,20 @@ void drawGenerateAngularResolutionTreeVPOL(){
   h06->Draw("colz");
 
   new TCanvas();
-  h02->Draw("colz");
+  hDeltaPhiDegVsTime->SetTitle("VPOL LDB pulser #delta#phi reconstruction vs realTime - run 152; Time of day; #delta#phi (Degrees)");
+  hDeltaPhiDegVsTime->Draw("colz");
+  hDeltaPhiDegVsTime->GetXaxis()->SetTimeDisplay(1);
+  gPad->Update();
 
   new TCanvas();
-  auto h02_py = h02->ProjectionY();
-  h02_py->SetLineColor(kRed);
-  h02_py->DrawNormalized();
+  auto hDeltaPhiDegVsTime_py = hDeltaPhiDegVsTime->ProjectionY();
+  hDeltaPhiDegVsTime_py->SetLineColor(kRed);
+  hDeltaPhiDegVsTime_py->DrawNormalized();
   h06->ProjectionY()->DrawNormalized("same");
+
+  new TCanvas();
+  hDeltaPhiDegVsTime_py->Draw();
+  hDeltaPhiDegVsTime_py->SetTitle("VPOL LDB pulser #delta#phi reconstruction; #delta#phi (Degrees); #Events per bin");
+  
   
 }

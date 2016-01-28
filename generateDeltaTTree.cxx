@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   const Double_t maxDeltaTriggerTimeNs = 1200;
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
+  geom->useKurtAnita3Numbers(1);
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
   for(int surf=0; surf<NUM_SURF; surf++){
     for(int chan=0; chan<NUM_CHAN; chan++){

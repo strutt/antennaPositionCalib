@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnitaIIINumbers(1);
+  geom->useKurtAnita3Numbers(1);
   
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* headChain = new TChain("headTree");

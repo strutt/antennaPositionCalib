@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   Int_t useKurt = 0;
-  geom->useKurtAnitaIIINumbers(useKurt); //1;
+  geom->useKurtAnita3Numbers(useKurt); //1;
   
 
   TString titleSuffix = useKurt==1 ? "Photo" : "Feed";
