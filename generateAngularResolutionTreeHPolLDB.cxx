@@ -63,7 +63,15 @@ int main(int argc, char *argv[])
   // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW3_2016_01_11_time_19_30_31.txt", pol);  
   // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW8_2016_01_18_time_17_10_01.txt", pol);  
   // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW7_2016_01_18_time_18_18_35.txt", pol);
-  CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW10_2016_01_19_time_15_02_11.txt", pol);
+  // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_4steps_WAISHPOL_NEW10_2016_01_19_time_15_02_11.txt", pol);
+
+  // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_2016_01_19_time_20_39_33.txt";
+  // TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV2_2016_01_21_time_14_03_25.txt";
+  // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV2_2016_01_21_time_14_53_41.txt";
+  // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV3_2016_01_25_time_12_24_25.txt";
+  TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV3_2016_01_25_time_11_33_16.txt";
+
+  CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
 
   CrossCorrelator* cc = new CrossCorrelator();
 
@@ -75,8 +83,8 @@ int main(int argc, char *argv[])
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
-    // fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run); 
-    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);   
+    fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run); 
+    // fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);   
     gpsChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
@@ -85,7 +93,7 @@ int main(int argc, char *argv[])
   headChain->SetBranchAddress("header", &header);  
   Adu5Pat* pat = NULL;
   gpsChain->SetBranchAddress("pat", &pat);
-  gpsChain->BuildIndex("realTime");  
+  // gpsChain->BuildIndex("realTime");  
   CalibratedAnitaEvent* calEvent = NULL;
   calEventChain->SetBranchAddress("event", &calEvent);
   
@@ -96,6 +104,8 @@ int main(int argc, char *argv[])
     std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
     return 1;
   }
+  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
+  lindaFileNameReference->Write();
 
   const Double_t sourceLat = - (77 + (51.23017/60)); // OLD NUMBERS
   // const Double_t sourceLat = - (77 + 51./60 + 44.16/3600); // From Google Earth 77°51'44.16"S
@@ -170,8 +180,8 @@ int main(int argc, char *argv[])
   Int_t maxToSave = 5;
   for(Long64_t entry = startEntry; entry < maxEntry; entry++){
     headChain->GetEntry(entry);
-    gpsChain->GetEntryWithIndex(header->realTime);
-    // gpsChain->GetEntry(entry);
+    // gpsChain->GetEntryWithIndex(header->realTime);
+    gpsChain->GetEntry(entry);
     if((header->trigType & 1)==1){
       UsefulAdu5Pat usefulPat(pat);
       triggerTimeNsExpected = usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
