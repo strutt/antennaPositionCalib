@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
   TTree* pitchRollTree = new TTree("pitchRollTree", "pitchRollTree");
 
   const Int_t numPitches = 11;
-  const Double_t startPitch = -2;
-  const Double_t deltaPitch = 0.4;
+  const Double_t startPitch = -0.1; //-2;
+  const Double_t deltaPitch = 0.1; //0.4;
   Double_t pitchOffsets[numPitches] = {0};
   for(Int_t pitchInd=0; pitchInd < numPitches; pitchInd++){
     pitchOffsets[pitchInd] = startPitch + deltaPitch*pitchInd;
@@ -108,8 +108,8 @@ int main(int argc, char *argv[])
 
   
   const Int_t numRolls = 11;
-  const Double_t startRoll = -2;
-  const Double_t deltaRoll = 0.4;
+  const Double_t startRoll = -0.5; //-2;
+  const Double_t deltaRoll = 0.1; //0.4;
   Double_t rollOffsets[numRolls] = {0};
   for(Int_t rollInd=0; rollInd < numRolls; rollInd++){
     rollOffsets[rollInd] = startRoll + deltaRoll*rollInd;
