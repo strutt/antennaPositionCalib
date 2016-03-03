@@ -64,7 +64,10 @@ int main(int argc, char *argv[])
 
   // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_2016_01_19_time_20_39_33.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_cosminV2_2016_01_21_time_14_30_18.txt";
-  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_cosminV3_2016_01_25_time_11_44_07.txt";
+  // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_cosminV3_2016_01_25_time_11_44_07.txt";
+  
+  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW12_bugFixed_reFit_2016_02_18_time_18_38_23.txt";
+  
   CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);
   
   CrossCorrelator* cc = new CrossCorrelator();  
@@ -133,6 +136,9 @@ int main(int argc, char *argv[])
   Double_t mrms = 0;
   Double_t brms = 0;
   UInt_t realTime = 0;    
+  Int_t phiSectorOfPeak = 0;
+  UShort_t hackyL3Trig = 0;
+
   // std::vector<Double_t>* deltaPhiDeg = NULL;
 
   angResTree->Branch("globalPeak", &globalPeak);
@@ -158,8 +164,11 @@ int main(int argc, char *argv[])
   angResTree->Branch("l3TrigPattern", &l3TrigPattern);
   angResTree->Branch("l3TrigPatternH", &l3TrigPatternH);  
   angResTree->Branch("eventNumber", &eventNumber);
-  angResTree->Branch("run", &run);  
+  angResTree->Branch("run", &run);
 
+  angResTree->Branch("phiSectorOfPeak", &phiSectorOfPeak);
+  angResTree->Branch("hackyL3Trig", &hackyL3Trig);
+  
   angResTree->Branch("mrms", &mrms);
   angResTree->Branch("brms", &brms);
   angResTree->Branch("realTime", &realTime);  
@@ -242,9 +251,25 @@ int main(int argc, char *argv[])
 	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
 						       triggeredThetaDeg, l3TrigPattern);
 
+	phiSectorOfPeak = -1;
+	Double_t bestDeltaPhiOfPeakToAnt = 360;
+	for(int ant=0; ant < NUM_SEAVEYS; ant++){
+	  Double_t phiOfAnt = cc->phiArrayDeg[pol].at(ant);
+	  Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, triggeredPhiDeg));
+	  if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
+	    bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
+	    phiSectorOfPeak = (ant % NUM_PHI);
+	  }
+	}
+	hackyL3Trig = (1 << phiSectorOfPeak);
+	
+
+	// TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
+	// 					 zoomThetaDeg, l3TrigPattern,
+	// 					 triggeredPhiDeg, triggeredThetaDeg);
 	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
-						 zoomThetaDeg, l3TrigPattern,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 zoomThetaDeg, hackyL3Trig,
+						 triggeredPhiDeg, triggeredThetaDeg);	
 	
 	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
 	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;
