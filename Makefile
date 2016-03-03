@@ -41,7 +41,8 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = -g -O2 -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11 
+#CXXFLAGS     = -g -O2 -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11
+CXXFLAGS     = -g -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11 
 LDFLAGS      = -g
 
 
@@ -72,7 +73,7 @@ endif
 OBJS = 
 
 
-BINARIES = findWaisPulserEvents findSeaveyPulses generateDeltaTTree generateDeltaTTreeVPOL generateDeltaTLookupHistograms compareMeasuredWithExpectedDeltaTs compareMeasuredWithExpectedDeltaTsFull generateAngularResolutionTree generateAngularResolutionTreeVPOL generateAngularResolutionTreeHPolLDB quickCheckThetaPhiExpected fitPitchRollOffsets fitPitchRollOffsetsNew generateAngularResolutionTreeFriend fitPitchRollOffsetsMinuit lookForPitchRollOffsets
+BINARIES = findWaisPulserEvents findSeaveyPulses generateDeltaTTree generateDeltaTTreeVPOL generateDeltaTLookupHistograms compareMeasuredWithExpectedDeltaTs compareMeasuredWithExpectedDeltaTsFull generateAngularResolutionTree generateAngularResolutionTreeVPOL generateAngularResolutionTreeHPolLDB quickCheckThetaPhiExpected fitPitchRollOffsets fitPitchRollOffsetsNew generateAngularResolutionTreeFriend fitPitchRollOffsetsMinuit lookForPitchRollOffsets makeCorrelationSummaries makeCorrelationSummariesJustOneEvent makeCorrelationSummariesTime checkDeltaTExpected generateSignalToNoiseRatioTree
 
 #Now the bits we're actually compiling
 all: $(OBJS) $(BINARIES)

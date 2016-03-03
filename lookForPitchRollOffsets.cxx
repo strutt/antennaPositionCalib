@@ -62,7 +62,9 @@ int main(int argc, char *argv[])
     gpsChain->Add(fileName);
 
     // Will wildcard matching work
-    fileName = TString::Format("januaryTests/photogrammetryNumbers/generateAngularResolutionTreePlots_%d*.root", run);
+    // fileName = TString::Format("januaryTests/photogrammetryNumbers/generateAngularResolutionTreePlots_%d*.root", run);
+    fileName = TString::Format("januaryTests/photogrammetryNumbersZeroedChannel16BH_cosminV3Trees/generateAngularResolutionTreePlots_%d*.root", run);    
+    // fileName = TString::Format("generateAngularResolutionTreePlots_%d_2016-01-29_*.root", run);    
     angResChain->Add(fileName);
   }
   Adu5Pat* pat = NULL;
@@ -70,7 +72,6 @@ int main(int argc, char *argv[])
   gpsChain->BuildIndex("eventNumber");  
   UInt_t eventNumberGps = 0;
   gpsChain->SetBranchAddress("eventNumber", &eventNumberGps);
-
 
   
   UInt_t eventNumber = 0;
@@ -98,8 +99,8 @@ int main(int argc, char *argv[])
   TTree* pitchRollTree = new TTree("pitchRollTree", "pitchRollTree");
 
   const Int_t numPitches = 11;
-  const Double_t startPitch = -0.1; //-2;
-  const Double_t deltaPitch = 0.1; //0.4;
+  const Double_t startPitch = 0; //-2; //-0.1; //-2;
+  const Double_t deltaPitch = 0.4; //0.1; //0.4;
   Double_t pitchOffsets[numPitches] = {0};
   for(Int_t pitchInd=0; pitchInd < numPitches; pitchInd++){
     pitchOffsets[pitchInd] = startPitch + deltaPitch*pitchInd;
@@ -108,13 +109,15 @@ int main(int argc, char *argv[])
 
   
   const Int_t numRolls = 11;
-  const Double_t startRoll = -0.5; //-2;
-  const Double_t deltaRoll = 0.1; //0.4;
+  const Double_t startRoll = 0; //-2; //-0.5; //-2;
+  const Double_t deltaRoll = 0.4; //0.1; //0.4;
   Double_t rollOffsets[numRolls] = {0};
   for(Int_t rollInd=0; rollInd < numRolls; rollInd++){
     rollOffsets[rollInd] = startRoll + deltaRoll*rollInd;
   }  
   pitchRollTree->Branch(TString::Format("rollOffsets[%d]", numRolls), rollOffsets);  
+
+
 
 
   Double_t deltaPhiDegs[numPitches][numRolls];
@@ -160,28 +163,38 @@ int main(int argc, char *argv[])
     zoomThetaDegPitchRoll = zoomThetaDeg;
     zoomPhiDegPitchRoll = zoomPhiDeg;    
     
-    for(Int_t pitchInd=0; pitchInd < numPitches; pitchInd++){
-      usefulPat.pitch = pitchOffsets[pitchInd];
-      for(Int_t rollInd=0; rollInd < numRolls; rollInd++){
-	usefulPat.roll = rollOffsets[rollInd];
+    // for(Int_t headingInd=0; headInd < numHeadings; headingInd++){
+    //   usefulPat.heading = += headingOffsets[headingInd];
+    //   if(usefulPat.heading < 0){
+    // 	usefulPat.heading+=360;
+    //   }
+    //   else if(usefulPat.heading >= 360){
+    // 	usefulPat.heading-=360;
+    //   }
+
+      for(Int_t pitchInd=0; pitchInd < numPitches; pitchInd++){	
+	usefulPat.pitch = pitchOffsets[pitchInd];
+	for(Int_t rollInd=0; rollInd < numRolls; rollInd++){
+	  usefulPat.roll = rollOffsets[rollInd];
 	
-	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected[pitchInd][rollInd], phiExpected[pitchInd][rollInd]);
+	  usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected[pitchInd][rollInd], phiExpected[pitchInd][rollInd]);
 
-	// My silly convention that I've stuck to so far...
-	phiExpected[pitchInd][rollInd]*=TMath::RadToDeg();
-	thetaExpected[pitchInd][rollInd]*=-1*TMath::RadToDeg();
-
-	
-	deltaPhiDegs[pitchInd][rollInd] = RootTools::getDeltaAngleDeg(phiExpected[pitchInd][rollInd], zoomPhiDeg);
-	deltaThetaDegs[pitchInd][rollInd] = RootTools::getDeltaAngleDeg(thetaExpected[pitchInd][rollInd], zoomThetaDeg);
-
-	// std::cout << usefulPat.pitch << "\t" << usefulPat.roll << "\t" << thetaExpected[pitchInd][rollInd] << "\t" << phiExpected[pitchInd][rollInd] << "\t" << deltaPhiDegs[pitchInd][rollInd] << "\t" << deltaThetaDegs[pitchInd][rollInd] << std::endl;
-
+	  // My silly convention that I've stuck to so far...
+	  phiExpected[pitchInd][rollInd]*=TMath::RadToDeg();
+	  thetaExpected[pitchInd][rollInd]*=-1*TMath::RadToDeg();
 
 	
+	  deltaPhiDegs[pitchInd][rollInd] = RootTools::getDeltaAngleDeg(phiExpected[pitchInd][rollInd], zoomPhiDeg);
+	  deltaThetaDegs[pitchInd][rollInd] = RootTools::getDeltaAngleDeg(thetaExpected[pitchInd][rollInd], zoomThetaDeg);
+
+	  // std::cout << usefulPat.pitch << "\t" << usefulPat.roll << "\t" << thetaExpected[pitchInd][rollInd] << "\t" << phiExpected[pitchInd][rollInd] << "\t" << deltaPhiDegs[pitchInd][rollInd] << "\t" << deltaThetaDegs[pitchInd][rollInd] << std::endl;
+
+
 	
+	
+	}
       }
-    }
+    // }
 
     pitchRollTree->Fill();
     
