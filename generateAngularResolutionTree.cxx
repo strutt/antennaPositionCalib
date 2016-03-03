@@ -1,11 +1,11 @@
 // -*- C++ -*-.
-/*****************************************************************************************************************
+/***********************************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
  Description:
-             Program to reconstruct VPol pulses from Wais Divide.
-*************************************************************************************************************** */
+             Program to reconstruct HPol pulses from Wais Divide.
+********************************************************************************************************* */
 
 #include "TFile.h"
 #include "TChain.h"
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 
-  // Photogrammetry positions
+  // // Photogrammetry positions
   // AnitaGeomTool* geom = AnitaGeomTool::Instance();
   // geom->useKurtAnita3Numbers(1);
   // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
@@ -71,31 +71,38 @@ int main(int argc, char *argv[])
   // TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV2_2016_01_21_time_14_03_25.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV2_2016_01_21_time_14_53_41.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV3_2016_01_25_time_12_24_25.txt";
-  TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV3_2016_01_25_time_11_33_16.txt";
-  
-  CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
+  // TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV3_2016_01_25_time_11_33_16.txt";
+
+  // TString lindaFileName = "photogrammetryButWithZeroed16BH";
+  // TString lindaFileName = "newBensNumbers_rotatingByHand.txt";
+  TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW11_cosminV3_nfixedBug_2016_02_05_time_15_42_15.txt";
+
+  Int_t insertion = CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
+  if(insertion > 0){
+    std::cerr << "Couldn't find file " << lindaFileName.Data() << std::endl;
+    return 1;
+  }
 
   CrossCorrelator* cc = new CrossCorrelator();
-
+  // cc->kZeroChannel16BH = true;
+  
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
   TChain* calEventChain = new TChain("eventTree");
-
   
   for(Int_t run=firstRun; run<=lastRun; run++){
     TString fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
     headChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsEvent%d.root", run, run);
-    // fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run);    
     gpsChain->Add(fileName);
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
   }
   RawAnitaHeader* header = NULL;
-  headChain->SetBranchAddress("header", &header);  
+  headChain->SetBranchAddress("header", &header);
   Adu5Pat* pat = NULL;
   gpsChain->SetBranchAddress("pat", &pat);
-  // gpsChain->BuildIndex("realTime");  
+
   CalibratedAnitaEvent* calEvent = NULL;
   calEventChain->SetBranchAddress("event", &calEvent);
   
@@ -106,7 +113,9 @@ int main(int argc, char *argv[])
     std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
     return 1;
   }
-  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
+  // TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
+  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", "photogrammetry");  
+
   lindaFileNameReference->Write();
 
   TTree* angResTree = new TTree("angResTree", "angResTree");
@@ -120,22 +129,51 @@ int main(int argc, char *argv[])
   Double_t zoomPeak = 0;
   Double_t zoomPhiDeg = 0;
   Double_t zoomThetaDeg = 0;
-  Double_t thetaExpected = 0;
-  Double_t phiExpected = 0;
   Double_t deltaThetaDeg = 0;
   Double_t deltaPhiDeg = 0;
+  Double_t zoomPeak2 = 0;
+  Double_t zoomPhiDeg2 = 0;
+  Double_t zoomThetaDeg2 = 0;
+  Double_t deltaThetaDeg2 = 0;
+  Double_t deltaPhiDeg2 = 0;
+  Double_t zoomPeak3 = 0;
+  Double_t zoomPhiDeg3 = 0;
+  Double_t zoomThetaDeg3 = 0;
+  Double_t deltaThetaDeg3 = 0;
+  Double_t deltaPhiDeg3 = 0;
+  Double_t zoomPeak4 = 0;
+  Double_t zoomPhiDeg4 = 0;
+  Double_t zoomThetaDeg4 = 0;
+  Double_t deltaThetaDeg4 = 0;
+  Double_t deltaPhiDeg4 = 0;
+  Double_t zoomPeak5 = 0;
+  Double_t zoomPhiDeg5 = 0;
+  Double_t zoomThetaDeg5 = 0;
+  Double_t deltaThetaDeg5 = 0;
+  Double_t deltaPhiDeg5 = 0;
+  Double_t zoomPeak6 = 0;
+  Double_t zoomPhiDeg6 = 0;
+  Double_t zoomThetaDeg6 = 0;
+  Double_t deltaThetaDeg6 = 0;
+  Double_t deltaPhiDeg6 = 0;
+
+  Double_t thetaExpected = 0;
+  Double_t phiExpected = 0;
   UInt_t eventNumber = 0;
   UInt_t triggerTimeNs = 0;
   UInt_t triggerTimeNsExpected = 0;
   Double_t heading = 0;
-  UInt_t l3TrigPattern = 0;  
+  UInt_t l3TrigPattern = 0;
   UInt_t l3TrigPatternH = 0;
-  Int_t run=0;
+  Int_t run = 0;
   Double_t mrms = 0;
   Double_t brms = 0;
-  UInt_t realTime = 0;    
-  // std::vector<Double_t>* deltaPhiDeg = NULL;
+  UInt_t realTime = 0;
 
+
+  Int_t phiSectorOfPeak = 0;
+  UShort_t hackyL3Trig = 0;
+  
   angResTree->Branch("globalPeak", &globalPeak);
   angResTree->Branch("globalPhiDeg", &globalPhiDeg);
   angResTree->Branch("globalThetaDeg", &globalThetaDeg);
@@ -147,26 +185,58 @@ int main(int argc, char *argv[])
   angResTree->Branch("zoomPeak", &zoomPeak);
   angResTree->Branch("zoomPhiDeg", &zoomPhiDeg);
   angResTree->Branch("zoomThetaDeg", &zoomThetaDeg);
-
   angResTree->Branch("deltaPhiDeg", &deltaPhiDeg);
   angResTree->Branch("deltaThetaDeg", &deltaThetaDeg);
 
+  angResTree->Branch("zoomPeak2", &zoomPeak2);
+  angResTree->Branch("zoomPhiDeg2", &zoomPhiDeg2);
+  angResTree->Branch("zoomThetaDeg2", &zoomThetaDeg2);
+  angResTree->Branch("deltaPhiDeg2", &deltaPhiDeg2);
+  angResTree->Branch("deltaThetaDeg2", &deltaThetaDeg2);
+
+  angResTree->Branch("zoomPeak3", &zoomPeak3);
+  angResTree->Branch("zoomPhiDeg3", &zoomPhiDeg3);
+  angResTree->Branch("zoomThetaDeg3", &zoomThetaDeg3);
+  angResTree->Branch("deltaPhiDeg3", &deltaPhiDeg3);
+  angResTree->Branch("deltaThetaDeg3", &deltaThetaDeg3);
+
+  angResTree->Branch("zoomPeak4", &zoomPeak4);
+  angResTree->Branch("zoomPhiDeg4", &zoomPhiDeg4);
+  angResTree->Branch("zoomThetaDeg4", &zoomThetaDeg4);
+  angResTree->Branch("deltaPhiDeg4", &deltaPhiDeg4);
+  angResTree->Branch("deltaThetaDeg4", &deltaThetaDeg4);
+
+  angResTree->Branch("zoomPeak5", &zoomPeak5);
+  angResTree->Branch("zoomPhiDeg5", &zoomPhiDeg5);
+  angResTree->Branch("zoomThetaDeg5", &zoomThetaDeg5);
+  angResTree->Branch("deltaPhiDeg5", &deltaPhiDeg5);
+  angResTree->Branch("deltaThetaDeg5", &deltaThetaDeg5);
+
+  angResTree->Branch("zoomPeak6", &zoomPeak6);
+  angResTree->Branch("zoomPhiDeg6", &zoomPhiDeg6);
+  angResTree->Branch("zoomThetaDeg6", &zoomThetaDeg6);
+  angResTree->Branch("deltaPhiDeg6", &deltaPhiDeg6);
+  angResTree->Branch("deltaThetaDeg6", &deltaThetaDeg6);
+
+  angResTree->Branch("phiSectorOfPeak", &phiSectorOfPeak);
+  angResTree->Branch("hackyL3Trig", &phiSectorOfPeak);
+  
   angResTree->Branch("thetaExpected", &thetaExpected);
   angResTree->Branch("phiExpected", &phiExpected);
   angResTree->Branch("triggerTimeNs", &triggerTimeNs);
   angResTree->Branch("triggerTimeNsExpected", &triggerTimeNsExpected);
   angResTree->Branch("heading", &heading);
-  angResTree->Branch("l3TrigPattern", &l3TrigPattern);  
+  angResTree->Branch("l3TrigPattern", &l3TrigPattern);
   angResTree->Branch("l3TrigPatternH", &l3TrigPatternH);
   angResTree->Branch("eventNumber", &eventNumber);
-  angResTree->Branch("run", &run);  
+  angResTree->Branch("run", &run);
 
   angResTree->Branch("mrms", &mrms);
   angResTree->Branch("brms", &brms);
-  angResTree->Branch("realTime", &realTime);  
+  angResTree->Branch("realTime", &realTime);
   
   Long64_t nEntries = headChain->GetEntries();
-  Long64_t maxEntry = 0; //5000;
+  Long64_t maxEntry = 0; //10000;
   Long64_t startEntry = 0;
   if(maxEntry<=0 || maxEntry > nEntries) maxEntry = nEntries;
   std::cout << "Processing " << maxEntry << " of " << nEntries << " entries." << std::endl;
@@ -194,48 +264,150 @@ int main(int argc, char *argv[])
 	mrms = usefulPat.mrms;
 	brms = usefulPat.brms;
 	realTime = header->realTime;
-	l3TrigPattern = header->l3TrigPattern;	
+	l3TrigPattern = header->l3TrigPattern;
 	l3TrigPatternH = header->l3TrigPatternH;
 	UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
-	globalPhiDeg = usefulEvent->eventNumber;
-	
+
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
 	thetaExpected*=-1*TMath::RadToDeg();
 
+
+
+	
+	phiExpected = phiExpected < 0 ? phiExpected + 360 : phiExpected;
+	phiExpected = phiExpected >= 360 ? phiExpected - 360 : phiExpected;
+
+
+	
 	cc->correlateEvent(usefulEvent, pol);
 
-	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
+	
+	// TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
+	// globalPhiDeg = -999;
+	// globalThetaDeg = -999;	
+
+	
+	// generic triggered, for getting close to target!
+	
+
+	cc->kDeltaPhiSect = 2;
 	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
 						       triggeredThetaDeg, l3TrigPatternH);
-
-	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
-						 zoomThetaDeg, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
-	
-	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
-	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;
 
 	triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
 	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
 
+
+	phiSectorOfPeak = -1;
+	Double_t bestDeltaPhiOfPeakToAnt = 360;
+	for(int ant=0; ant < NUM_SEAVEYS; ant++){
+	  Double_t phiOfAnt = cc->phiArrayDeg[pol].at(ant);
+	  Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, triggeredPhiDeg));
+	  if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
+	    bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
+	    phiSectorOfPeak = (ant % NUM_PHI);
+	  }
+	}
+	hackyL3Trig = (1 << phiSectorOfPeak);
+	
+	
+	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
+						 zoomThetaDeg, l3TrigPatternH,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
 	zoomPhiDeg = zoomPhiDeg < 0 ? zoomPhiDeg + 360 : zoomPhiDeg;
 	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;
 
-	phiExpected = phiExpected < 0 ? phiExpected + 360 : phiExpected;
-	phiExpected = phiExpected >= 360 ? phiExpected - 360 : phiExpected;
-
 	deltaPhiDeg = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg);
-	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);
+	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);	
+
+
+
+	
+	cc->kDeltaPhiSect = 1;
+
+	TH2D* hZoomedImageH2 = cc->makeZoomedImage(pol, zoomPeak2, zoomPhiDeg2,
+						 zoomThetaDeg2, l3TrigPatternH,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg2 = zoomPhiDeg2 < 0 ? zoomPhiDeg2 + 360 : zoomPhiDeg2;
+	zoomPhiDeg2 = zoomPhiDeg2 >= 360 ? zoomPhiDeg2 - 360 : zoomPhiDeg2;
+	
+	deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg2);
+	deltaThetaDeg2 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg2);
+
+
+
+	cc->kDeltaPhiSect = 2;
+
+	TH2D* hZoomedImageH3 = cc->makeZoomedImage(pol, zoomPeak3, zoomPhiDeg3,
+						 zoomThetaDeg3, hackyL3Trig,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg3 = zoomPhiDeg3 < 0 ? zoomPhiDeg3 + 360 : zoomPhiDeg3;
+	zoomPhiDeg3 = zoomPhiDeg3 >= 360 ? zoomPhiDeg3 - 360 : zoomPhiDeg3;
+	
+	deltaPhiDeg3 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg3);
+	deltaThetaDeg3 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg3);
+
+
+
+	cc->kDeltaPhiSect = 1;
+
+	TH2D* hZoomedImageH4 = cc->makeZoomedImage(pol, zoomPeak4, zoomPhiDeg4,
+						 zoomThetaDeg4, hackyL3Trig,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg4 = zoomPhiDeg4 < 0 ? zoomPhiDeg4 + 360 : zoomPhiDeg4;
+	zoomPhiDeg4 = zoomPhiDeg4 >= 360 ? zoomPhiDeg4 - 360 : zoomPhiDeg4;
+	
+	deltaPhiDeg4 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg4);
+	deltaThetaDeg4 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg4);
+
+
+
+	cc->kDeltaPhiSect = -2;
+
+	TH2D* hZoomedImageH5 = cc->makeZoomedImage(pol, zoomPeak5, zoomPhiDeg5,
+						 zoomThetaDeg5, l3TrigPatternH,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg5 = zoomPhiDeg5 < 0 ? zoomPhiDeg5 + 360 : zoomPhiDeg5;
+	zoomPhiDeg5 = zoomPhiDeg5 >= 360 ? zoomPhiDeg5 - 360 : zoomPhiDeg5;
+	
+	deltaPhiDeg5 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg5);
+	deltaThetaDeg5 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg5);	
+
+
+	cc->kDeltaPhiSect = -1;
+
+	TH2D* hZoomedImageH6 = cc->makeZoomedImage(pol, zoomPeak6, zoomPhiDeg6,
+						 zoomThetaDeg6, l3TrigPatternH,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg6 = zoomPhiDeg6 < 0 ? zoomPhiDeg6 + 360 : zoomPhiDeg6;
+	zoomPhiDeg6 = zoomPhiDeg6 >= 360 ? zoomPhiDeg6 - 360 : zoomPhiDeg6;
+	
+	deltaPhiDeg6 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg6);
+	deltaThetaDeg6 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg6);	
+
+	
+	
 
 	if(numSaved < maxToSave){
 	  numSaved++;
 	}
 	else{
 	  delete hTriggeredImageH;
-	  delete hGlobalImageH;
+	  // delete hGlobalImageH;
 	  delete hZoomedImageH;
+	  delete hZoomedImageH2;
+	  delete hZoomedImageH3;
+	  delete hZoomedImageH4;
+	  delete hZoomedImageH5;
+	  delete hZoomedImageH6;	  
 	}
 
 	angResTree->Fill();
