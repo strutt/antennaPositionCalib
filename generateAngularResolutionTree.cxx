@@ -113,8 +113,8 @@ int main(int argc, char *argv[])
     std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
     return 1;
   }
-  // TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
-  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", "photogrammetry");  
+  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
+  // TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", "photogrammetry");  
 
   lindaFileNameReference->Write();
 
@@ -156,6 +156,16 @@ int main(int argc, char *argv[])
   Double_t zoomThetaDeg6 = 0;
   Double_t deltaThetaDeg6 = 0;
   Double_t deltaPhiDeg6 = 0;
+  Double_t zoomPeak7 = 0;
+  Double_t zoomPhiDeg7 = 0;
+  Double_t zoomThetaDeg7 = 0;
+  Double_t deltaThetaDeg7 = 0;
+  Double_t deltaPhiDeg7 = 0;
+  Double_t zoomPeak8 = 0;
+  Double_t zoomPhiDeg8 = 0;
+  Double_t zoomThetaDeg8 = 0;
+  Double_t deltaThetaDeg8 = 0;
+  Double_t deltaPhiDeg8 = 0;
 
   Double_t thetaExpected = 0;
   Double_t phiExpected = 0;
@@ -218,8 +228,22 @@ int main(int argc, char *argv[])
   angResTree->Branch("deltaPhiDeg6", &deltaPhiDeg6);
   angResTree->Branch("deltaThetaDeg6", &deltaThetaDeg6);
 
+
+  angResTree->Branch("zoomPeak7", &zoomPeak7);
+  angResTree->Branch("zoomPhiDeg7", &zoomPhiDeg7);
+  angResTree->Branch("zoomThetaDeg7", &zoomThetaDeg7);
+  angResTree->Branch("deltaPhiDeg7", &deltaPhiDeg7);
+  angResTree->Branch("deltaThetaDeg7", &deltaThetaDeg7);
+
+  angResTree->Branch("zoomPeak8", &zoomPeak8);
+  angResTree->Branch("zoomPhiDeg8", &zoomPhiDeg8);
+  angResTree->Branch("zoomThetaDeg8", &zoomThetaDeg8);
+  angResTree->Branch("deltaPhiDeg8", &deltaPhiDeg8);
+  angResTree->Branch("deltaThetaDeg8", &deltaThetaDeg8);
+
+  
   angResTree->Branch("phiSectorOfPeak", &phiSectorOfPeak);
-  angResTree->Branch("hackyL3Trig", &phiSectorOfPeak);
+  angResTree->Branch("hackyL3Trig", &hackyL3Trig);
   
   angResTree->Branch("thetaExpected", &thetaExpected);
   angResTree->Branch("phiExpected", &phiExpected);
@@ -324,7 +348,9 @@ int main(int argc, char *argv[])
 	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);	
 
 
-
+	TString name1 = TString::Format("hTriggeredZoomImageH%u_1", eventNumber);
+	hZoomedImageH->SetName(name1);
+	
 	
 	cc->kDeltaPhiSect = 1;
 
@@ -337,6 +363,9 @@ int main(int argc, char *argv[])
 	
 	deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg2);
 	deltaThetaDeg2 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg2);
+
+	TString name2 = TString::Format("hTriggeredZoomImageH%u_2", eventNumber);
+	hZoomedImageH2->SetName(name2);
 
 
 
@@ -352,7 +381,10 @@ int main(int argc, char *argv[])
 	deltaPhiDeg3 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg3);
 	deltaThetaDeg3 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg3);
 
+	TString name3 = TString::Format("hTriggeredZoomImageH%u_3", eventNumber);
+	hZoomedImageH3->SetName(name3);
 
+	
 
 	cc->kDeltaPhiSect = 1;
 
@@ -367,6 +399,11 @@ int main(int argc, char *argv[])
 	deltaThetaDeg4 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg4);
 
 
+	TString name4 = TString::Format("hTriggeredZoomImageH%u_4", eventNumber);
+	hZoomedImageH4->SetName(name4);
+
+
+	
 
 	cc->kDeltaPhiSect = -2;
 
@@ -381,6 +418,13 @@ int main(int argc, char *argv[])
 	deltaThetaDeg5 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg5);	
 
 
+	TString name5 = TString::Format("hTriggeredZoomImageH%u_5", eventNumber);
+	hZoomedImageH5->SetName(name5);
+
+
+	
+	
+
 	cc->kDeltaPhiSect = -1;
 
 	TH2D* hZoomedImageH6 = cc->makeZoomedImage(pol, zoomPeak6, zoomPhiDeg6,
@@ -393,6 +437,50 @@ int main(int argc, char *argv[])
 	deltaPhiDeg6 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg6);
 	deltaThetaDeg6 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg6);	
 
+
+	TString name6 = TString::Format("hTriggeredZoomImageH%u_6", eventNumber);
+	hZoomedImageH6->SetName(name6);
+
+
+
+
+
+	cc->kDeltaPhiSect = -2;
+
+	TH2D* hZoomedImageH7 = cc->makeZoomedImage(pol, zoomPeak7, zoomPhiDeg7,
+						 zoomThetaDeg7, hackyL3Trig,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg7 = zoomPhiDeg7 < 0 ? zoomPhiDeg7 + 360 : zoomPhiDeg7;
+	zoomPhiDeg7 = zoomPhiDeg7 >= 360 ? zoomPhiDeg7 - 360 : zoomPhiDeg7;
+	
+	deltaPhiDeg7 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg7);
+	deltaThetaDeg7 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg7);	
+
+
+	TString name7 = TString::Format("hTriggeredZoomImageH%u_7", eventNumber);
+	hZoomedImageH7->SetName(name7);
+
+
+	
+	
+
+	cc->kDeltaPhiSect = -1;
+
+	TH2D* hZoomedImageH8 = cc->makeZoomedImage(pol, zoomPeak8, zoomPhiDeg8,
+						 zoomThetaDeg8, hackyL3Trig,
+						 triggeredPhiDeg, triggeredThetaDeg);
+
+	zoomPhiDeg8 = zoomPhiDeg8 < 0 ? zoomPhiDeg8 + 360 : zoomPhiDeg8;
+	zoomPhiDeg8 = zoomPhiDeg8 >= 360 ? zoomPhiDeg8 - 360 : zoomPhiDeg8;
+	
+	deltaPhiDeg8 = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg8);
+	deltaThetaDeg8 = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg8);	
+
+
+	TString name8 = TString::Format("hTriggeredZoomImageH%u_8", eventNumber);
+	hZoomedImageH8->SetName(name8);
+	
 	
 	
 
@@ -408,6 +496,8 @@ int main(int argc, char *argv[])
 	  delete hZoomedImageH4;
 	  delete hZoomedImageH5;
 	  delete hZoomedImageH6;	  
+	  delete hZoomedImageH7;
+	  delete hZoomedImageH8;	  
 	}
 
 	angResTree->Fill();
