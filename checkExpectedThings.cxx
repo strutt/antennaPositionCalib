@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	Double_t thetaExpected;
   	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=-1*TMath::RadToDeg();
+	thetaExpected*=TMath::RadToDeg();
 
 	cc->correlateEvent(usefulEvent, pol);
 

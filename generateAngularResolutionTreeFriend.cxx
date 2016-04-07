@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
       usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected0,
 					     phiExpected0);
       phiExpected0*=TMath::RadToDeg();
-      thetaExpected0*=-1*TMath::RadToDeg();
+      thetaExpected0*=TMath::RadToDeg();
 
       deltaPhiDeg0 = RootTools::getDeltaAngleDeg(phiExpected0, zoomPhiDeg);
       deltaThetaDeg0 = RootTools::getDeltaAngleDeg(thetaExpected0, zoomThetaDeg);
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
       usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpectedTilted,
 					     phiExpectedTilted);
       phiExpectedTilted*=TMath::RadToDeg();
-      thetaExpectedTilted*=-1*TMath::RadToDeg();
+      thetaExpectedTilted*=TMath::RadToDeg();
 
       deltaPhiDegTilted = RootTools::getDeltaAngleDeg(phiExpectedTilted, zoomPhiDeg);
       deltaThetaDegTilted = RootTools::getDeltaAngleDeg(thetaExpectedTilted, zoomThetaDeg);

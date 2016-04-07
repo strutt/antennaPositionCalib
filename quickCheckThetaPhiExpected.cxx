@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=-1*TMath::RadToDeg();
+	thetaExpected*=TMath::RadToDeg();
 
 
 	hHeadPitch->Fill(pat->heading, pat->pitch);

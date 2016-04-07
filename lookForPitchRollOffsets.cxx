@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 
 	  // My silly convention that I've stuck to so far...
 	  phiExpected[pitchInd][rollInd]*=TMath::RadToDeg();
-	  thetaExpected[pitchInd][rollInd]*=-1*TMath::RadToDeg();
+	  thetaExpected[pitchInd][rollInd]*=TMath::RadToDeg();
 
 	
 	  deltaPhiDegs[pitchInd][rollInd] = RootTools::getDeltaAngleDeg(phiExpected[pitchInd][rollInd], zoomPhiDeg);

@@ -365,7 +365,7 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
       
 	Double_t dt_e = usefulPat.getDeltaTExpected(ant2, ant1,
 						    phiExpected*TMath::DegToRad(),
-						    -1*thetaExpected*TMath::DegToRad());
+						    thetaExpected*TMath::DegToRad());
 	Double_t dt_m = correlationDeltaTs[combo];
 
 	// Is this the right way around?

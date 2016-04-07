@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 	
 // 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpectedNew, phiExpectedNew);
 // 	phiExpectedNew*=TMath::RadToDeg();
-// 	thetaExpectedNew*=-1*TMath::RadToDeg();
+// 	thetaExpectedNew*=*TMath::RadToDeg();
 
 // 	Double_t deltaThetaNew = RootTools::getDeltaAngleDeg(thetaExpectedNew, zoomThetaDeg);
 // 	Double_t deltaPhiNew = RootTools::getDeltaAngleDeg(phiExpectedNew, zoomPhiDeg);	
@@ -373,7 +373,7 @@ Double_t funcToMin(Double_t pitchOffset, Double_t rollOffset, Double_t headingOf
     
     Double_t thetaExpected0, phiExpected0;
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected0, phiExpected0);
-    thetaExpected0 *= -1*TMath::RadToDeg();
+    thetaExpected0 *= TMath::RadToDeg();
     phiExpected0 *= TMath::RadToDeg();
 
     usefulPat.pitch = pitchOffset;
@@ -384,7 +384,7 @@ Double_t funcToMin(Double_t pitchOffset, Double_t rollOffset, Double_t headingOf
     
     Double_t thetaExpected, phiExpected;
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
-    thetaExpected *= -1*TMath::RadToDeg();
+    thetaExpected *= TMath::RadToDeg();
     phiExpected *= TMath::RadToDeg();
 
 

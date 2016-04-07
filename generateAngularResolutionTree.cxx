@@ -27,6 +27,7 @@
 #include "CrossCorrelator.h"
 #include "OutputConvention.h"
 
+
 int main(int argc, char *argv[])
 {
 
@@ -228,7 +229,6 @@ int main(int argc, char *argv[])
   angResTree->Branch("deltaPhiDeg6", &deltaPhiDeg6);
   angResTree->Branch("deltaThetaDeg6", &deltaThetaDeg6);
 
-
   angResTree->Branch("zoomPeak7", &zoomPeak7);
   angResTree->Branch("zoomPhiDeg7", &zoomPhiDeg7);
   angResTree->Branch("zoomThetaDeg7", &zoomThetaDeg7);
@@ -240,7 +240,6 @@ int main(int argc, char *argv[])
   angResTree->Branch("zoomThetaDeg8", &zoomThetaDeg8);
   angResTree->Branch("deltaPhiDeg8", &deltaPhiDeg8);
   angResTree->Branch("deltaThetaDeg8", &deltaThetaDeg8);
-
   
   angResTree->Branch("phiSectorOfPeak", &phiSectorOfPeak);
   angResTree->Branch("hackyL3Trig", &hackyL3Trig);
@@ -258,9 +257,26 @@ int main(int argc, char *argv[])
   angResTree->Branch("mrms", &mrms);
   angResTree->Branch("brms", &brms);
   angResTree->Branch("realTime", &realTime);
+
+  Double_t maxDPhiDeg;
+  angResTree->Branch("maxDPhiDeg", &maxDPhiDeg);
+  Double_t maxDPhiDeg2;
+  angResTree->Branch("maxDPhiDeg2", &maxDPhiDeg2);
+  Double_t maxDPhiDeg3;
+  angResTree->Branch("maxDPhiDeg3", &maxDPhiDeg3);
+  Double_t maxDPhiDeg4;
+  angResTree->Branch("maxDPhiDeg4", &maxDPhiDeg4);
+  Double_t maxDPhiDeg5;
+  angResTree->Branch("maxDPhiDeg5", &maxDPhiDeg5);
+  Double_t maxDPhiDeg6;
+  angResTree->Branch("maxDPhiDeg6", &maxDPhiDeg6);
+  Double_t maxDPhiDeg7;
+  angResTree->Branch("maxDPhiDeg7", &maxDPhiDeg7);
+  Double_t maxDPhiDeg8;
+  angResTree->Branch("maxDPhiDeg8", &maxDPhiDeg8);
   
   Long64_t nEntries = headChain->GetEntries();
-  Long64_t maxEntry = 0; //10000;
+  Long64_t maxEntry = 0; //1000; //10000;
   Long64_t startEntry = 0;
   if(maxEntry<=0 || maxEntry > nEntries) maxEntry = nEntries;
   std::cout << "Processing " << maxEntry << " of " << nEntries << " entries." << std::endl;
@@ -294,35 +310,28 @@ int main(int argc, char *argv[])
 
 	usefulPat.getThetaAndPhiWaveWaisDivide(thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=-1*TMath::RadToDeg();
-
-
-
+	thetaExpected*=TMath::RadToDeg();
 	
 	phiExpected = phiExpected < 0 ? phiExpected + 360 : phiExpected;
 	phiExpected = phiExpected >= 360 ? phiExpected - 360 : phiExpected;
 
-
-	
 	cc->correlateEvent(usefulEvent, pol);
-
-
 	
 	// TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 	// globalPhiDeg = -999;
-	// globalThetaDeg = -999;	
-
+	// globalThetaDeg = -999;
 	
 	// generic triggered, for getting close to target!
-	
 
+	cc->maxDPhiDeg = 0;
+	
+	cc->kUseOffAxisDelay = 0;
 	cc->kDeltaPhiSect = 2;
 	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
 						       triggeredThetaDeg, l3TrigPatternH);
 
 	triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
 	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
-
 
 	phiSectorOfPeak = -1;
 	Double_t bestDeltaPhiOfPeakToAnt = 360;
@@ -335,28 +344,25 @@ int main(int argc, char *argv[])
 	  }
 	}
 	hackyL3Trig = (1 << phiSectorOfPeak);
-	
-	
+
 	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
-						 zoomThetaDeg, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 zoomThetaDeg, triggeredPhiDeg, triggeredThetaDeg);
 
 	zoomPhiDeg = zoomPhiDeg < 0 ? zoomPhiDeg + 360 : zoomPhiDeg;
 	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;
 
 	deltaPhiDeg = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg);
-	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);	
-
+	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);
 
 	TString name1 = TString::Format("hTriggeredZoomImageH%u_1", eventNumber);
 	hZoomedImageH->SetName(name1);
-	
-	
+
+	maxDPhiDeg = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
 	cc->kDeltaPhiSect = 1;
 
 	TH2D* hZoomedImageH2 = cc->makeZoomedImage(pol, zoomPeak2, zoomPhiDeg2,
-						 zoomThetaDeg2, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 zoomThetaDeg2, triggeredPhiDeg, triggeredThetaDeg);
 
 	zoomPhiDeg2 = zoomPhiDeg2 < 0 ? zoomPhiDeg2 + 360 : zoomPhiDeg2;
 	zoomPhiDeg2 = zoomPhiDeg2 >= 360 ? zoomPhiDeg2 - 360 : zoomPhiDeg2;
@@ -368,8 +374,10 @@ int main(int argc, char *argv[])
 	hZoomedImageH2->SetName(name2);
 
 
-
+	maxDPhiDeg2 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
 	cc->kDeltaPhiSect = 2;
+	cc->kUseOffAxisDelay = 1;	
 
 	TH2D* hZoomedImageH3 = cc->makeZoomedImage(pol, zoomPeak3, zoomPhiDeg3,
 						 zoomThetaDeg3, hackyL3Trig,
@@ -386,6 +394,8 @@ int main(int argc, char *argv[])
 
 	
 
+	maxDPhiDeg3 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
 	cc->kDeltaPhiSect = 1;
 
 	TH2D* hZoomedImageH4 = cc->makeZoomedImage(pol, zoomPeak4, zoomPhiDeg4,
@@ -403,13 +413,13 @@ int main(int argc, char *argv[])
 	hZoomedImageH4->SetName(name4);
 
 
-	
-
+	maxDPhiDeg4 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;	
+	cc->kUseOffAxisDelay = 0;
 	cc->kDeltaPhiSect = -2;
 
 	TH2D* hZoomedImageH5 = cc->makeZoomedImage(pol, zoomPeak5, zoomPhiDeg5,
-						 zoomThetaDeg5, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 zoomThetaDeg5, triggeredPhiDeg, triggeredThetaDeg);
 
 	zoomPhiDeg5 = zoomPhiDeg5 < 0 ? zoomPhiDeg5 + 360 : zoomPhiDeg5;
 	zoomPhiDeg5 = zoomPhiDeg5 >= 360 ? zoomPhiDeg5 - 360 : zoomPhiDeg5;
@@ -424,12 +434,12 @@ int main(int argc, char *argv[])
 
 	
 	
-
+	maxDPhiDeg5 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
 	cc->kDeltaPhiSect = -1;
 
 	TH2D* hZoomedImageH6 = cc->makeZoomedImage(pol, zoomPeak6, zoomPhiDeg6,
-						 zoomThetaDeg6, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 zoomThetaDeg6, triggeredPhiDeg, triggeredThetaDeg);
 
 	zoomPhiDeg6 = zoomPhiDeg6 < 0 ? zoomPhiDeg6 + 360 : zoomPhiDeg6;
 	zoomPhiDeg6 = zoomPhiDeg6 >= 360 ? zoomPhiDeg6 - 360 : zoomPhiDeg6;
@@ -443,8 +453,9 @@ int main(int argc, char *argv[])
 
 
 
-
-
+	maxDPhiDeg6 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
+	cc->kUseOffAxisDelay = 1;
 	cc->kDeltaPhiSect = -2;
 
 	TH2D* hZoomedImageH7 = cc->makeZoomedImage(pol, zoomPeak7, zoomPhiDeg7,
@@ -464,7 +475,8 @@ int main(int argc, char *argv[])
 
 	
 	
-
+	maxDPhiDeg7 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
 	cc->kDeltaPhiSect = -1;
 
 	TH2D* hZoomedImageH8 = cc->makeZoomedImage(pol, zoomPeak8, zoomPhiDeg8,
@@ -480,10 +492,12 @@ int main(int argc, char *argv[])
 
 	TString name8 = TString::Format("hTriggeredZoomImageH%u_8", eventNumber);
 	hZoomedImageH8->SetName(name8);
-	
-	
-	
 
+
+
+	maxDPhiDeg8 = cc->maxDPhiDeg;
+	cc->maxDPhiDeg = 0;
+	
 	if(numSaved < maxToSave){
 	  numSaved++;
 	}

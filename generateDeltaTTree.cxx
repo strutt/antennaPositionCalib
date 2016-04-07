@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
 	}
 
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=-1*TMath::RadToDeg();
+	thetaExpected*=TMath::RadToDeg();
 	for(int ant=0; ant<NUM_SEAVEYS; ant++){
 	  Double_t antPhiDeg = geom->getAntPhiPositionRelToAftFore(ant)*TMath::RadToDeg();
 	  deltaPhiDeg->at(ant) = RootTools::getDeltaAngleDeg(phiExpected, antPhiDeg);

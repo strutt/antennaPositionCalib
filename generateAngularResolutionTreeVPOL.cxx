@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
 	
 	usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=-1*TMath::RadToDeg();
+	thetaExpected*=TMath::RadToDeg();
 
 	cc->correlateEvent(usefulEvent, pol);
 
