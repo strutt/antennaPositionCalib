@@ -53,7 +53,9 @@ double quickOptAllAntStepsVPOL(const double *par);
 void fillArrays();
 void makeGraphs(int fittingStep);
 
-
+Bool_t makeDistGraphs = false;
+TGraph* grAdjacentDists[NUM_SEAVEYS];
+TGraph* grVerticalDists[NUM_SEAVEYS];
 
 // Set of global vectors which we use to store the variables
 std::vector<UInt_t> eventNumberIndex;
@@ -64,7 +66,6 @@ std::vector<Int_t> antIndex2;
 std::vector<Double_t> maxCorrTimeIndex;
 std::vector<Int_t> adjacent;
 
-
 Double_t lastVertSlope[NUM_SEAVEYS];
 Double_t lastVertMean[NUM_SEAVEYS];
 Double_t lastVertRms[NUM_SEAVEYS];
@@ -72,6 +73,8 @@ Double_t lastVertRms[NUM_SEAVEYS];
 Double_t lastAdjSlope[NUM_SEAVEYS];
 Double_t lastAdjMean[NUM_SEAVEYS];
 Double_t lastAdjRms[NUM_SEAVEYS];
+
+
 
 const Double_t meanScaleFactor = 10000;
 const Double_t rmsScaleFactor = 100;
@@ -92,6 +95,8 @@ int main(int argc, char *argv[])
     return 1;
   }  
 
+
+  
   // here I initialize the fitter and give it the function I want to minimize...
   ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
   // set tolerance , etc...
@@ -106,7 +111,11 @@ int main(int argc, char *argv[])
   const int numVars = NUM_SEAVEYS*varsPerAnt;
 
   Double_t zeros[numVars] = {0};
-  quickOptAllAntStepsVPOL(zeros);
+  makeDistGraphs = true;  
+  Double_t priorToFit = quickOptAllAntStepsVPOL(zeros);
+  makeDistGraphs = false;    
+  std::cout << "Figure of merit before fit" << priorToFit << std::endl;
+  makeGraphs(0);
 
   
   ROOT::Math::Functor funcToMin(&quickOptAllAntStepsVPOL, numVars);
@@ -150,7 +159,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  const int numFittingSteps = 4;
+  const int numFittingSteps = 1;
   for(int fittingStep = 0; fittingStep < numFittingSteps; fittingStep++){
     // first, fix all the variables.
     // I will unfix the relevant ones after.
@@ -189,7 +198,6 @@ int main(int argc, char *argv[])
 
       
     case 3:
-
       std::cout << "Fitting zs" << std::endl;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
 	min->ReleaseVariable(2*NUM_SEAVEYS + ant);
@@ -222,8 +230,16 @@ int main(int argc, char *argv[])
     std::cout << "Minimum = " << min->MinValue() << std::endl;
 
 
-    // now we store the intermediate numbers in lovely TGraphs
-    makeGraphs(fittingStep);
+    // put the minimum values into the variable array and rerun at the minimum
+    for(int varInd=0; varInd<varsPerAnt*NUM_SEAVEYS; varInd++){
+      variables[varInd] = min->X()[varInd];
+    }
+    makeDistGraphs = true;  
+    quickOptAllAntStepsVPOL(&variables[0]);
+    makeDistGraphs = false;
+    
+    // now we store the values form the minimum in lovely TGraphs
+    makeGraphs(fittingStep+1);
 
   }
 
@@ -241,14 +257,26 @@ int main(int argc, char *argv[])
 void makeGraphs(int fittingStep){
   // making these graphs gets a little busy so I'll put it out the way
 
-
   // Antenna number axis
   Double_t antNums[NUM_SEAVEYS];
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     antNums[ant] = ant;
+
+    if(grVerticalDists[ant]){
+      grVerticalDists[ant]->SetName(TString::Format("grVerticalDists_%d_%d", ant, fittingStep));
+      grVerticalDists[ant]->Write();
+      delete grVerticalDists[ant];
+      grVerticalDists[ant] = NULL;
+    }    
+    if(grAdjacentDists[ant]){
+      grAdjacentDists[ant]->SetName(TString::Format("grAdjacentDists_%d_%d", ant, fittingStep));   
+      grAdjacentDists[ant]->Write();
+      delete grAdjacentDists[ant];
+      grAdjacentDists[ant] = NULL;
+    }
   }
-
-
+  
+  
   // means
   TGraph* grAdjMean = new TGraph(NUM_SEAVEYS, antNums, lastAdjMean);
   TString adjMeanName = TString::Format("grAdjMean_%d", fittingStep);
@@ -262,9 +290,13 @@ void makeGraphs(int fittingStep){
     grAdjMean->GetY()[ant] = y*y*meanScaleFactor;
   }
   adjMeanTitle = TString::Format("Weighted adjacent pairs after fitting iteration %d; Antenna; Mean (ns)", fittingStep);
-  grAdjMean->SetTitle(adjMeanTitle);  
+  grAdjMean->SetTitle(adjMeanTitle);
+  adjMeanName = TString::Format("grAdjMean_%d_weighted", fittingStep);
+  grAdjMean->SetName(adjMeanName);
+  grAdjMean->Write();  
   delete grAdjMean;
 
+  
 
   
   TGraph* grVertMean = new TGraph(NUM_SEAVEYS, antNums, lastVertMean);
@@ -281,6 +313,10 @@ void makeGraphs(int fittingStep){
   }
   vertMeanTitle = TString::Format("Weighted vertical pairs after fitting iteration %d; Antenna; Mean (ns)", fittingStep);
   grVertMean->SetTitle(vertMeanTitle);  
+
+  vertMeanName = TString::Format("grVertMean_%d_weighted", fittingStep);
+  grVertMean->SetName(vertMeanName);
+  grVertMean->Write();
   
   delete grVertMean;
 
@@ -302,10 +338,15 @@ void makeGraphs(int fittingStep){
     grAdjRms->GetY()[ant] = y*y*rmsScaleFactor;
   }
   adjRmsTitle = TString::Format("Weighted adjacent pairs after fitting iteration %d; Antenna; Rms (ns)", fittingStep);
-  grAdjRms->SetTitle(adjRmsTitle);  
+  grAdjRms->SetTitle(adjRmsTitle);
+  adjRmsName = TString::Format("grAdjRms_%d_weighted", fittingStep);
+  grAdjRms->SetName(adjRmsName);
+  grAdjRms->Write();  
+  
   delete grAdjRms;
 
 
+  
   
   TGraph* grVertRms = new TGraph(NUM_SEAVEYS, antNums, lastVertRms);
   TString vertRmsName = TString::Format("grVertRms_%d", fittingStep);
@@ -321,7 +362,11 @@ void makeGraphs(int fittingStep){
   }
   vertRmsTitle = TString::Format("Weighted vertical pairs after fitting iteration %d; Antenna; Rms (ns)", fittingStep);
   grVertRms->SetTitle(vertRmsTitle);  
-  
+  vertRmsName = TString::Format("grVertRms_%d_weighted", fittingStep);
+  grVertRms->SetName(vertRmsName);
+  grVertRms->SetTitle(vertRmsTitle);    
+  grVertRms->Write();  
+
   delete grVertRms;
 
   
@@ -344,8 +389,13 @@ void makeGraphs(int fittingStep){
     grAdjSlope->GetY()[ant] = y*y*sumGradScaleFactor;
   }
   adjSlopeTitle = TString::Format("Weighted adjacent pairs after fitting iteration %d; Antenna; Slope (ns)", fittingStep);
-  grAdjSlope->SetTitle(adjSlopeTitle);  
+  grAdjSlope->SetTitle(adjSlopeTitle);
+adjSlopeName = TString::Format("grAdjSlope_%d_weighted", fittingStep);
+  grAdjSlope->SetName(adjSlopeName);
+  grAdjSlope->Write();  
   delete grAdjSlope;
+
+  
 
 
   
@@ -363,8 +413,33 @@ void makeGraphs(int fittingStep){
   }
   vertSlopeTitle = TString::Format("Weighted vertical pairs after fitting iteration %d; Antenna; Slope (ns/rad)", fittingStep);
   grVertSlope->SetTitle(vertSlopeTitle);  
-  
+  vertSlopeName = TString::Format("grVertSlope_%d_weighted", fittingStep);
+  grVertSlope->SetName(vertSlopeName);    
+  grVertSlope->Write();  
   delete grVertSlope;
+
+
+
+
+  // and now the grand total...
+  Double_t antTotals[NUM_SEAVEYS] = {0};
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    antTotals[ant] = 0;
+    antTotals[ant] += lastVertSlope[ant]*lastVertSlope[ant]*sumGradScaleFactor;
+    antTotals[ant] += lastVertMean[ant]*lastVertMean[ant]*meanScaleFactor;
+    antTotals[ant] += lastVertRms[ant]*lastVertRms[ant]*rmsScaleFactor;
+    antTotals[ant] += lastAdjSlope[ant]*lastAdjSlope[ant]*sumGradScaleFactor;
+    antTotals[ant] += lastAdjMean[ant]*lastAdjMean[ant]*meanScaleFactor;
+    antTotals[ant] += lastAdjRms[ant]*lastAdjRms[ant]*rmsScaleFactor;
+  }
+  
+  TGraph* grTotal = new TGraph(NUM_SEAVEYS, antNums, antTotals);
+  TString totalName = TString::Format("grTotal_%d", fittingStep);
+  grTotal->SetName(totalName);
+  TString totalTitle = TString::Format("Sum of weighted values after fitting iteration %d", fittingStep);
+  grTotal->SetTitle(totalTitle);
+  grTotal->Write();
+  
   
 }
 
@@ -523,8 +598,10 @@ void fillArrays(){
 	  upper+=TMath::TwoPi();
 	}
       }
-            
-      if(phiWave>lower && phiWave<upper && (maxCorrTime-deltaTExpected)<1) {
+
+      // Small pulses won't align between channels we need to cut them, which is done by this if statement
+      const Double_t maxAbsDeltaDeltaT = 1; // ns
+      if(phiWave>lower && phiWave<upper && TMath::Abs(maxCorrTime-deltaTExpected)<maxAbsDeltaDeltaT) {
 
 	thetaWaveIndex.push_back(thetaWave);
 	phiWaveIndex.push_back(phiWave);
@@ -650,17 +727,27 @@ double quickOptAllAntStepsVPOL(const double *par){
     }
     else{
       Int_t vert = 0;
+
       if (ant1<16){
+	// if ant1 is in top ring and ant2 is in middle ring	
 	if (ant2<32){
+	  // then we label by ant1
 	  vert = ant1;
 	}
+	// if ant1 is in the top ring and ant2 is in the bottom ring
 	else{
+	  // then we label by the bottom ring antenna
 	  vert = ant2;
 	}
       }
-      else {
+      // lastly if ant1 is not in the top ring, we always label by it.
+      else {       
 	vert = ant1;
       }
+
+      // // now I'm having to print numbers to the screen because I'm not sure that makes sense...
+      // std::cout << vert << "\t" << ant1 << "\t" << ant2 << std::endl;
+      
       verticalAntDeltaT[vert].push_back(maxCorrTime - deltaTExpected);
       verticalAntPhiWave[vert].push_back(phiWave);
       // countVertical[vert]++;
@@ -669,24 +756,41 @@ double quickOptAllAntStepsVPOL(const double *par){
       // countVertical[vert]++;
       
     }    
-    entry++;
   }
- 
+
+  // here we allow pretty plots to be made...
+  if(makeDistGraphs==true){
+    for(int ant = 0; ant < NUM_SEAVEYS; ++ant){
+
+      if(grAdjacentDists[ant]!=NULL){
+  	delete grAdjacentDists[ant];
+      }
+      grAdjacentDists[ant] = new TGraph(adjacentAntDeltaT[ant].size(), &adjacentAntPhiWave[ant][0], &adjacentAntDeltaT[ant][0]);
+
+      if(grVerticalDists[ant]!=NULL){
+  	delete grVerticalDists[ant];
+      }      
+      grVerticalDists[ant] = new TGraph(verticalAntDeltaT[ant].size(), &verticalAntPhiWave[ant][0], &verticalAntDeltaT[ant][0]);      
+    }    
+  }
+  
   // Double_t sumMeanAdj = getMean(adjacentAntDeltaT, countAdjacent)*10000;
   // Double_t sumMeanVert = getMean(verticalAntDeltaT, countVertical)*10000;
   // Double_t sumMeanAdj = getMean(adjacentAntDeltaT)*meanScaleFactor;
   // Double_t sumMeanVert = getMean(verticalAntDeltaT)*meanScaleFactor;  
 
+
+
+  
   Double_t sumMeanAdj = 0;
   Double_t sumMeanVert = 0;
   Double_t sumRMSAdj = 0;
   Double_t sumRMSVert = 0;
   Double_t sumGRADAdj = 0;
-  Double_t sumGRADVert = 0;  
+  Double_t sumGRADVert = 0;
 
   Int_t wrappedPhi[NUM_PHI]={1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0};    
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
-
 
     // means
     lastAdjMean[ant] = getMean(adjacentAntDeltaT[ant]);
@@ -721,10 +825,10 @@ double quickOptAllAntStepsVPOL(const double *par){
   sumGRADAdj *= sumGradScaleFactor;
   sumGRADVert *= sumGradScaleFactor;
     
-  std::cout << sumMeanAdj/meanScaleFactor << "  " << sumRMSAdj/rmsScaleFactor << " "
-  	    << sumGRADAdj/sumGradScaleFactor << " "
-  	    << sumMeanVert/meanScaleFactor << " " << sumRMSVert/rmsScaleFactor << " "
-  	    << sumGRADVert/sumGradScaleFactor << std::endl;
+  // std::cout << sumMeanAdj/meanScaleFactor << "  " << sumRMSAdj/rmsScaleFactor << " "
+  // 	    << sumGRADAdj/sumGradScaleFactor << " "
+  // 	    << sumMeanVert/meanScaleFactor << " " << sumRMSVert/rmsScaleFactor << " "
+  // 	    << sumGRADVert/sumGradScaleFactor << std::endl;
   
   return (sumMeanAdj+sumRMSAdj+sumGRADAdj+sumMeanVert+sumRMSVert+sumGRADVert);
    
@@ -769,30 +873,30 @@ double quickOptAllAntStepsVPOL(const double *par){
 // }
 
 
- double findSlope(Int_t wrappedPhi, const std::vector<double>& xIn, const std::vector<double>& yIn){  
+double findSlope(Int_t wrappedPhi, const std::vector<double>& xIn, const std::vector<double>& yIn){  
 
-   Double_t SUMx = 0;
-   Double_t SUMy = 0;
-   Double_t SUMxy = 0;
-   Double_t SUMxx = 0;
+  Double_t SUMx = 0;
+  Double_t SUMy = 0;
+  Double_t SUMxy = 0;
+  Double_t SUMxx = 0;
    
-   const int n = xIn.size();
-   for(int i=0; i < n; ++i){
-     double thisX = xIn.at(i);
+  const int n = xIn.size();
+  for(int i=0; i < n; ++i){
+    double thisX = xIn.at(i);
       
-     if(wrappedPhi){
-       if(thisX > TMath::Pi()){
-	 thisX -= TMath::TwoPi();
-       }
-     }
+    if(wrappedPhi){
+      if(thisX > TMath::Pi()){
+	thisX -= TMath::TwoPi();
+      }
+    }
 
-     SUMx = SUMx + thisX; //xIn[i];
-     SUMy = SUMy + yIn.at(i);
-     SUMxy = SUMxy + thisX*yIn.at(i);
-     SUMxx = SUMxx + thisX*thisX;
+    SUMx = SUMx + thisX; //xIn[i];
+    SUMy = SUMy + yIn.at(i);
+    SUMxy = SUMxy + thisX*yIn.at(i);
+    SUMxx = SUMxx + thisX*thisX;
 
-   }
-   Double_t slope = ( SUMx*SUMy - n*SUMxy ) / ( SUMx*SUMx - n*SUMxx );
+  }
+  Double_t slope = ( SUMx*SUMy - n*SUMxy ) / ( SUMx*SUMx - n*SUMxx );
 
   return slope;  
 }
