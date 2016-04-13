@@ -74,11 +74,12 @@ Double_t lastAdjSlope[NUM_SEAVEYS];
 Double_t lastAdjMean[NUM_SEAVEYS];
 Double_t lastAdjRms[NUM_SEAVEYS];
 
-
-
 const Double_t meanScaleFactor = 10000;
-const Double_t rmsScaleFactor = 100;
-const Double_t sumGradScaleFactor = 10000;
+const Double_t rmsScaleFactor = meanScaleFactor;
+const Double_t sumGradScaleFactor = meanScaleFactor;
+// const Double_t meanScaleFactor = 10000;
+// const Double_t rmsScaleFactor = 100;
+// const Double_t sumGradScaleFactor = 10000;
 
 int main(int argc, char *argv[])
 {
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
   makeDistGraphs = true;  
   Double_t priorToFit = quickOptAllAntStepsVPOL(zeros);
   makeDistGraphs = false;    
-  std::cout << "Figure of merit before fit" << priorToFit << std::endl;
+  std::cout << "Figure of merit before fit = " << priorToFit << std::endl;
   makeGraphs(0);
 
   
@@ -159,7 +160,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  const int numFittingSteps = 1;
+  const int numFittingSteps = 4;
   for(int fittingStep = 0; fittingStep < numFittingSteps; fittingStep++){
     // first, fix all the variables.
     // I will unfix the relevant ones after.
