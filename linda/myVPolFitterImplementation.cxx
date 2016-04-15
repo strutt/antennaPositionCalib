@@ -37,6 +37,10 @@
 #include <Math/Functor.h>
 
 
+Bool_t useMeans = true;
+Bool_t useRMSs = true;
+Bool_t useGrads = true;
+
 double getDeltaTExpectedOpt(int ant1, int ant2, double thetaWave, double phiWave,
 			    double *deltaR, double *deltaZ, double *deltaPhi);
 
@@ -101,8 +105,10 @@ int main(int argc, char *argv[])
   // here I initialize the fitter and give it the function I want to minimize...
   ROOT::Math::Minimizer* min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
   // set tolerance , etc...
-  min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
-  min->SetMaxIterations(10000);  // for GSL
+  // min->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2
+  // min->SetMaxFunctionCalls(5000); // for Minuit/Minuit2
+  min->SetMaxFunctionCalls(50000); // for Minuit/Minuit2     
+  min->SetMaxIterations(5000);  // for GSL
   min->SetTolerance(0.0001);
   min->SetPrintLevel(1);
 
@@ -134,7 +140,6 @@ int main(int argc, char *argv[])
   // // deltaPhi[i]=par[i+NUM_SEAVEYS*2];
   // // deltaCableDelays[i] = par[i+NUM_SEAVEYS*3];  
 
-
   // so now I give the variables the proper names, values and step sizes.
   for(int varTypeInd = 0; varTypeInd < varsPerAnt; varTypeInd++){
     TString varType;
@@ -143,15 +148,15 @@ int main(int argc, char *argv[])
       varType = "r";
       break;
     case 1:
-      varType = "phi";
+      varType = "z";
       break;
     case 2:
-      varType = "z";
+      varType = "phi";
       break;
     case 3:
       varType = "t";
       break;
-    }    
+    }
     for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
       const Int_t varInd = varTypeInd*NUM_SEAVEYS + ant;
       TString varName = varType + TString::Format("(%d)", ant);
@@ -159,7 +164,7 @@ int main(int argc, char *argv[])
       min->SetVariable(varInd, std::string(varName.Data()), variables[varInd], step[varInd]);
     }
   }
-
+  
   const int numFittingSteps = 4;
   for(int fittingStep = 0; fittingStep < numFittingSteps; fittingStep++){
     // first, fix all the variables.
@@ -168,43 +173,117 @@ int main(int argc, char *argv[])
       min->FixVariable(ant);
       min->FixVariable(NUM_SEAVEYS + ant);
       min->FixVariable(2*NUM_SEAVEYS + ant);
-      min->FixVariable(3*NUM_SEAVEYS + ant);	
+      min->FixVariable(3*NUM_SEAVEYS + ant);
     }
-    
+
     switch(fittingStep){
 
     case 0:
-      std::cout << "Fitting ts" << std::endl;
-      for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
-      }
-      break;
-
-
-    case 1:
       std::cout << "Fitting rs, phis" << std::endl;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	min->ReleaseVariable(ant);
-	min->ReleaseVariable(NUM_SEAVEYS + ant);
+    	min->ReleaseVariable(ant);
+    	min->ReleaseVariable(2*NUM_SEAVEYS + ant);
       }      
+      useMeans=false;
+      useRMSs=true;
+      useGrads=true;
       break;
 
-
     case 2:
-      std::cout << "Fitting ts again" << std::endl;
+      std::cout << "Fitting ts" << std::endl;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
+    	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
       }
+      useMeans=true;
+      useRMSs=false;
+      useGrads=false;
       break;
 
       
     case 3:
       std::cout << "Fitting zs" << std::endl;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	min->ReleaseVariable(2*NUM_SEAVEYS + ant);
-      }      
+    	min->ReleaseVariable(NUM_SEAVEYS + ant);
+      }
+      useMeans=true;
+      useRMSs=true;
+      useGrads=true;
       break;
-    } 
+    }
+
+
+    // case 0:
+    //   std::cout << "phis" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(2*NUM_SEAVEYS + ant);
+    //   }
+    //   useMeans=false;
+    //   useRMSs=false;
+    //   useGrads=true;
+    //   break;
+
+    // case 1:
+    //   std::cout << "Fitting rs" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(ant);
+    //   }
+    //   useMeans=false;
+    //   useRMSs=true;
+    //   useGrads=false;
+    //   break;
+
+    // case 2:
+    //   std::cout << "Fitting ts" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
+    //   }
+    //   useMeans=true;
+    //   break;
+
+      
+    // case 3:
+    //   std::cout << "Fitting zs" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(NUM_SEAVEYS + ant);
+    //   }      
+    //   break;
+    // }
+    
+
+    // switch(fittingStep){
+    // case 0:
+    //   std::cout << "Fitting ts" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
+    //   }
+    //   break;
+
+
+    // case 1:
+    //   std::cout << "Fitting rs, phis" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(ant);
+    // 	min->ReleaseVariable(2*NUM_SEAVEYS + ant);
+    //   }      
+    //   break;
+
+
+    // case 2:
+    //   std::cout << "Fitting ts again" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(3*NUM_SEAVEYS + ant);	
+    //   }
+    //   break;
+
+      
+    // case 3:
+    //   std::cout << "Fitting zs" << std::endl;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	min->ReleaseVariable(NUM_SEAVEYS + ant);
+    //   }      
+    //   break;
+    // }
+    
 
     // Always fix t0 = 0;
     min->FixVariable(NUM_SEAVEYS*3);
@@ -825,13 +904,22 @@ double quickOptAllAntStepsVPOL(const double *par){
   sumRMSVert *= rmsScaleFactor;  
   sumGRADAdj *= sumGradScaleFactor;
   sumGRADVert *= sumGradScaleFactor;
-    
-  // std::cout << sumMeanAdj/meanScaleFactor << "  " << sumRMSAdj/rmsScaleFactor << " "
-  // 	    << sumGRADAdj/sumGradScaleFactor << " "
-  // 	    << sumMeanVert/meanScaleFactor << " " << sumRMSVert/rmsScaleFactor << " "
-  // 	    << sumGRADVert/sumGradScaleFactor << std::endl;
-  
-  return (sumMeanAdj+sumRMSAdj+sumGRADAdj+sumMeanVert+sumRMSVert+sumGRADVert);
+
+  Double_t figureOfMerit = 0;
+  if(useMeans){
+    figureOfMerit += sumMeanAdj;
+    figureOfMerit += sumMeanVert;    
+  }
+  if(useRMSs){
+    figureOfMerit += sumRMSAdj;
+    figureOfMerit += sumRMSVert;    
+  }
+  if(useGrads){
+    figureOfMerit += sumGRADAdj;
+    figureOfMerit += sumGRADVert;
+  }
+
+  return figureOfMerit;
    
 }
 
