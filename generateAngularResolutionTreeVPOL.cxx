@@ -41,19 +41,21 @@ int main(int argc, char *argv[])
   std::cout << std::endl;
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = argc==3 ? atoi(argv[2]) : firstRun;
-  const Int_t cutTimeNs = Int_t(60e3);
+  // const Int_t cutTimeNs = Int_t(60e3);
+  const Int_t cutTimeNs = Int_t(2e3);  
   
   AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
 
-  // // Photogrammetry positions
-  // AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  // geom->useKurtAnita3Numbers(1);
-  // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
-  // for(Int_t surf=0; surf<NUM_SURF; surf++){
-  //   for(Int_t chan=0; chan<NUM_CHAN; chan++){
-  //     cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
-  //   }
-  // }
+  //  Photogrammetry positions
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnita3Numbers(1);
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  for(Int_t surf=0; surf<NUM_SURF; surf++){
+    for(Int_t chan=0; chan<NUM_CHAN; chan++){
+      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
+    }
+  }
+  TString lindaFileName = "photogrammetryNoExtraDelay";
 
   // CrossCorrelator::directlyInsertGeometry("newLindaNumbers_LDBHPOL_2015_12_17_time_17_38_21.txt",
   // 					  pol);
@@ -65,12 +67,13 @@ int main(int argc, char *argv[])
   // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_2016_01_19_time_20_39_33.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_cosminV2_2016_01_21_time_14_30_18.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW10_cosminV3_2016_01_25_time_11_44_07.txt";
+
+  // TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW12_bugFixed_reFit_2016_02_18_time_18_38_23.txt";
+
+  // CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);
   
-  TString lindaFileName = "newLindaNumbers_4steps_VPOL_10kVSeavey_NEW12_bugFixed_reFit_2016_02_18_time_18_38_23.txt";
+  CrossCorrelator* cc = new CrossCorrelator();
   
-  CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);
-  
-  CrossCorrelator* cc = new CrossCorrelator();  
   
   TChain* headChain = new TChain("headTree");
   TChain* gpsChain = new TChain("adu5PatTree");
@@ -116,9 +119,9 @@ int main(int argc, char *argv[])
   Double_t globalPeak = 0;
   Double_t globalPhiDeg = 0;
   Double_t globalThetaDeg = 0;
-  Double_t triggeredPeak = 0;
-  Double_t triggeredPhiDeg = 0;
-  Double_t triggeredThetaDeg = 0;
+  // Double_t triggeredPeak = 0;
+  // Double_t triggeredPhiDeg = 0;
+  // Double_t triggeredThetaDeg = 0;
   Double_t zoomPeak = 0;
   Double_t zoomPhiDeg = 0;
   Double_t zoomThetaDeg = 0;
@@ -145,9 +148,9 @@ int main(int argc, char *argv[])
   angResTree->Branch("globalPhiDeg", &globalPhiDeg);
   angResTree->Branch("globalThetaDeg", &globalThetaDeg);
 
-  angResTree->Branch("triggeredPeak", &triggeredPeak);
-  angResTree->Branch("triggeredPhiDeg", &triggeredPhiDeg);
-  angResTree->Branch("triggeredThetaDeg", &triggeredThetaDeg);
+  // angResTree->Branch("triggeredPeak", &triggeredPeak);
+  // angResTree->Branch("triggeredPhiDeg", &triggeredPhiDeg);
+  // angResTree->Branch("triggeredThetaDeg", &triggeredThetaDeg);
 
   angResTree->Branch("zoomPeak", &zoomPeak);
   angResTree->Branch("zoomPhiDeg", &zoomPhiDeg);
@@ -191,11 +194,12 @@ int main(int argc, char *argv[])
       timedelay[4] = Int_t(850e6);
     }
     ndelays = 5;
-
   } 
 
   Long64_t timedelay_corr[10];
-  for (int i=0;i<ndelays;++i) timedelay_corr[i]= timedelay[i] - i*shortdelay;
+  for (int i=0;i<ndelays;++i){
+    timedelay_corr[i]= timedelay[i] - i*shortdelay;
+  }
 
 
   Long64_t nEntries = headChain->GetEntries();
@@ -242,20 +246,67 @@ int main(int argc, char *argv[])
 	
 	usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=TMath::RadToDeg();
+	thetaExpected*=-1*TMath::RadToDeg();
 
-	cc->correlateEvent(usefulEvent, pol);
+	// cc->correlateEvent(usefulEvent, pol);
+
+	cc->getNormalizedInterpolatedTGraphs(usefulEvent, pol);
+
+	// cc->doFFTs(pol);
+	for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+	  FancyFFTs::doFFT(cc->numSamples, cc->grsResampled[pol][ant]->GetY(), cc->ffts[pol][ant]);
+
+	  // if(cc->kDoSimpleSatelliteFiltering > 0){
+	  // cc->simple260MHzSatelliteNotch(pol, ant);
+	  // cc->simple370MHzSatelliteNotch(pol, ant);
+	  const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+	  const Double_t deltaF_MHz = 1e3/(cc->numSamples*cc->nominalSamplingDeltaT);
+
+	  const Double_t notchLowEdgeMHz = 0;
+	  const Double_t notchHighEdgeMHz = 500;
+
+	  const Double_t notchLowEdgeMHz2 = 850;
+	  const Double_t notchHighEdgeMHz2 = 1400;
+
+	  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+	    // if(deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+	    if((deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz) || (deltaF_MHz*freqInd >= notchLowEdgeMHz2 && deltaF_MHz*freqInd < notchHighEdgeMHz2)){
+	      
+ 	      // std::cout << pol << "\t" << ant << "\t" << deltaF_MHz << "\t" << deltaF_MHz*freqInd << "\t" << notchLowEdgeMHz << "\t" << notchHighEdgeMHz << "\t" << std::endl;
+	      cc->ffts[pol][ant][freqInd].real(0);
+	      cc->ffts[pol][ant][freqInd].imag(0);
+	    }    
+	  }
+	    
+	  cc->renormalizeFourierDomain(pol, ant);
+
+	  FancyFFTs::zeroPadFFT(cc->ffts[pol][ant],
+				cc->fftsPadded[pol][ant],
+				cc->numSamples,
+				cc->numSamplesUpsampled);
+	  
+	}	  
+	cc->doAllCrossCorrelationsThreaded(pol);
+	cc->eventNumber[pol] = usefulEvent->eventNumber;	
+
+	// reconstruct
+	cc->reconstruct(pol, cc->coarseMapPeakValues[pol][0],
+			cc->coarseMapPeakPhiDegs[pol][0],
+			cc->coarseMapPeakThetaDegs[pol][0]);
+
 
 	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
-	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
-						       triggeredThetaDeg, l3TrigPattern);
+	// TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
+	// 					       triggeredThetaDeg, l3TrigPattern);
 
 	phiSectorOfPeak = -1;
 	Double_t bestDeltaPhiOfPeakToAnt = 360;
 	for(int ant=0; ant < NUM_SEAVEYS; ant++){
 	  Double_t phiOfAnt = cc->phiArrayDeg[pol].at(ant);
-	  Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, triggeredPhiDeg));
+	  Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, globalPhiDeg));
+	  // Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, triggeredPhiDeg));	  
+	  
 	  if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
 	    bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
 	    phiSectorOfPeak = (ant % NUM_PHI);
@@ -269,13 +320,14 @@ int main(int argc, char *argv[])
 	// 					 triggeredPhiDeg, triggeredThetaDeg);
 	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
 						 zoomThetaDeg, hackyL3Trig,
-						 triggeredPhiDeg, triggeredThetaDeg);	
+						 // triggeredPhiDeg, triggeredThetaDeg);
+						 globalPhiDeg, globalThetaDeg);		
 	
 	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
 	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;
 
-	triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
-	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
+	// triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
+	// triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
 
 	zoomPhiDeg = zoomPhiDeg < 0 ? zoomPhiDeg + 360 : zoomPhiDeg;
 	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;
@@ -286,11 +338,12 @@ int main(int argc, char *argv[])
 	deltaPhiDeg = RootTools::getDeltaAngleDeg(phiExpected, zoomPhiDeg);
 	deltaThetaDeg = RootTools::getDeltaAngleDeg(thetaExpected, zoomThetaDeg);
 	
+	
 	if(numSaved < maxToSave){
 	  numSaved++;
 	}
 	else{
-	  delete hTriggeredImageH;
+	  // delete hTriggeredImageH;
 	  delete hGlobalImageH;
 	  delete hZoomedImageH;	  
 	}
@@ -301,7 +354,7 @@ int main(int argc, char *argv[])
 	
       }
     }
-    p++;
+    p.inc(entry, maxEntry);
   }
   
   outFile->Write();

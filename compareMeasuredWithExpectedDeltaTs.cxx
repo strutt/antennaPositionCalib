@@ -47,7 +47,7 @@ Bool_t fMakePlots;
 CrossCorrelator* cc;
 const Int_t VARS_PER_ANT = 1; //3;
 const Int_t numVars = NUM_SEAVEYS*VARS_PER_ANT;
-
+const AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 Double_t extraCableDelays[NUM_SEAVEYS] = {-0.0610646, 0.0814919, -0.0318929, 0.0213868, 0.00642687, 0.0739681, -0.0187586, 0.038752, -0.0471173, -0.0213559, -0.196427, -0.0150133, -0.0971924, -0.0465036, -0.0127587, -0.0574128, 0.0104067, 0.0426622, 0.00792418, 0.0659761, 0.0458048, 0.0615984, 0.0971525, 0.0355208, 0.0565163, -0.0156482, 0.00579238, 0.0171781, 0.120797, -0.0179532, -0.0289847, -0.0103913, -0.0442358, 0.104188, 0.0176335, 0.0288141, 0.0228393, -0.00693136, 0.0572457, -0.0108378, 0.0149809, -0.0182012, 0.030143, 0.00987049, -0.0159015, -0.0346651, -0.0411542, -0.388232};
 
 Double_t sumOverSquaredDifferences(const Double_t* allTheVars);
@@ -238,7 +238,8 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
   }
 
   for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
-    cc->rArray.at(ant) = rArray.at(ant)+vars[varInd];
+    // cc->rArray.at(ant) = rArray.at(ant)+vars[varInd];
+    cc->rArray[pol].at(ant) = rArray.at(ant)+vars[varInd];    
     varInd++;
   }
  
@@ -307,7 +308,7 @@ Double_t sumOverSquaredDifferences(const Double_t* vars){
 	// This function doesn't care about offsets.
 	// That only comes into play when considering a source location.
 	// Double_t dt_e = emptyPat.getDeltaTExpected(ant2, ant1, phi, theta);
-	Double_t dt_e = cc->getDeltaTExpected(ant1, ant2, phi, theta);
+	Double_t dt_e = cc->getDeltaTExpected(pol, ant1, ant2, phi, theta);
 
 	// std::cout << dt_e << "\t" << dt_m << std::endl;
 

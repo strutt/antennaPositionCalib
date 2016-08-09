@@ -42,20 +42,14 @@ int main(int argc, char *argv[])
   const Int_t firstRun = atoi(argv[1]);
   const Int_t lastRun = firstRun; //argc==3 ? atoi(argv[2]) : firstRun;
 
-  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
-  // AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
+  AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
 
-  // Photogrammetry positions
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnita3Numbers(1);
-  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
-  for(Int_t surf=0; surf<NUM_SURF; surf++){
-    for(Int_t chan=0; chan<NUM_CHAN; chan++){
-      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0; ///< From phase center to AMPAs (hopefully)
-    }
-  }
-  TString lindaFileName = "photogrammetryNoExtraDelay";
-  
+  // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW11_cosminV3_nfixedBug_2016_02_05_time_15_42_15.txt";
+  // Int_t insertion = CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
+  // if(insertion > 0){
+  //   std::cerr << "Couldn't find file " << lindaFileName.Data() << std::endl;
+  //   return 1;
+  // }
 
   CrossCorrelator* cc = new CrossCorrelator();
 
@@ -81,8 +75,8 @@ int main(int argc, char *argv[])
     fileName = TString::Format("~/UCL/ANITA/flight1415/root/run%d/calEventFile%d.root", run, run);
     calEventChain->Add(fileName);
     
-    fileName = oc.getOutputDir() + TString::Format("generateAngularResolutionTreePlots_%d*.root", run);
-    // fileName = TString::Format("generateAngularResolutionTreePlots_%d*.root", run);        
+    fileName = oc.getOutputDir() + TString::Format("generateAngularResolutionTreeVPOLPlots_%d*.root", run);
+    // fileName = TString::Format("generateAngularResolutionTreePlots_%d*.root", run);
     angResChain->Add(fileName);
   }
   
@@ -112,11 +106,6 @@ int main(int argc, char *argv[])
     std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
     return 1;
   }
-  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
-  // TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", "photogrammetry");  
-
-  lindaFileNameReference->Write();
-  
 
   TTree* snrTree = new TTree("snrTree", "snrTree");
   Double_t snr2 = 0;
@@ -153,6 +142,44 @@ int main(int argc, char *argv[])
     calEventChain->GetEntryWithIndex(eventNumber);
 
     UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(calEvent);
+    // cc->correlateEvent(usefulEvent, pol);
+
+    // cc->getNormalizedInterpolatedTGraphs(usefulEvent, pol);
+    // cc->doFFTs(pol);
+    // for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    //   FancyFFTs::doFFT(cc->numSamples, cc->grsResampled[pol][ant]->GetY(), cc->ffts[pol][ant]);
+
+    //   // if(cc->kDoSimpleSatelliteFiltering > 0){
+    //   // cc->simple260MHzSatelliteNotch(pol, ant);
+    //   // cc->simple370MHzSatelliteNotch(pol, ant);
+    //   const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+    //   const Double_t deltaF_MHz = 1e3/(cc->numSamples*cc->nominalSamplingDeltaT);
+
+    //   const Double_t notchLowEdgeMHz = 0;
+    //   const Double_t notchHighEdgeMHz = 500;
+
+    //   const Double_t notchLowEdgeMHz2 = 850;
+    //   const Double_t notchHighEdgeMHz2 = 1400;
+	  
+    //   for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    // 	// if(deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+    // 	if((deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz) || (deltaF_MHz*freqInd >= notchLowEdgeMHz2 && deltaF_MHz*freqInd < notchHighEdgeMHz2)){
+	      
+    // 	  // std::cout << pol << "\t" << ant << "\t" << deltaF_MHz << "\t" << deltaF_MHz*freqInd << "\t" << notchLowEdgeMHz << "\t" << notchHighEdgeMHz << "\t" << std::endl;
+    // 	  cc->ffts[pol][ant][freqInd].real(0);
+    // 	  cc->ffts[pol][ant][freqInd].imag(0);
+    // 	}    
+    //   }
+	    
+    //   cc->renormalizeFourierDomain(pol, ant);
+
+    //   FancyFFTs::zeroPadFFT(cc->ffts[pol][ant],
+    // 			    cc->fftsPadded[pol][ant],
+    // 			    cc->numSamples,
+    // 			    cc->numSamplesUpsampled);
+	  
+    // }	  
+
     cc->getNormalizedInterpolatedTGraphs(usefulEvent, pol);
     cc->doFFTs(pol);
     Int_t numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
