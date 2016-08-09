@@ -1,0 +1,1 @@
+cp phaseCenterPositionsRelativeToPhotogrammetryAnita3Linda.dat ~/Repositories/EventReader/calib/phaseCenterPositionsRelativeToPhotogrammetryAnita3.dat; cp relativePhaseCenterToAmpaDelaysLinda.dat ~/Repositories/EventReader/calib/relativePhaseCenterToAmpaDelays.dat
