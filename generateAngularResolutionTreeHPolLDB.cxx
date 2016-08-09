@@ -69,9 +69,9 @@ int main(int argc, char *argv[])
   // TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV2_2016_01_21_time_14_03_25.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV2_2016_01_21_time_14_53_41.txt";
   // TString lindaFileName = "newLindaNumbers_4steps_WAISHPOL_NEW10_cosminV3_2016_01_25_time_12_24_25.txt";
-  TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV3_2016_01_25_time_11_33_16.txt";
+  // TString lindaFileName = "newLindaNumbers_LDBHPOL_NEW10_cosminV3_2016_01_25_time_11_33_16.txt";
 
-  CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
+  // CrossCorrelator::directlyInsertGeometry(lindaFileName, pol);  
 
   CrossCorrelator* cc = new CrossCorrelator();
 
@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
     std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
     return 1;
   }
-  TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
-  lindaFileNameReference->Write();
+  // TNamed* lindaFileNameReference = new TNamed("lindaFileNameReference", lindaFileName.Data());
+  // lindaFileNameReference->Write();
 
   const Double_t sourceLat = - (77 + (51.23017/60)); // OLD NUMBERS
   // const Double_t sourceLat = - (77 + 51./60 + 44.16/3600); // From Google Earth 77°51'44.16"S
@@ -118,9 +118,9 @@ int main(int argc, char *argv[])
   Double_t globalPeak = 0;
   Double_t globalPhiDeg = 0;
   Double_t globalThetaDeg = 0;
-  Double_t triggeredPeak = 0;
-  Double_t triggeredPhiDeg = 0;
-  Double_t triggeredThetaDeg = 0;
+  // Double_t triggeredPeak = 0;
+  // Double_t triggeredPhiDeg = 0;
+  // Double_t triggeredThetaDeg = 0;
   Double_t zoomPeak = 0;
   Double_t zoomPhiDeg = 0;
   Double_t zoomThetaDeg = 0;
@@ -144,9 +144,9 @@ int main(int argc, char *argv[])
   angResTree->Branch("globalPhiDeg", &globalPhiDeg);
   angResTree->Branch("globalThetaDeg", &globalThetaDeg);
 
-  angResTree->Branch("triggeredPeak", &triggeredPeak);
-  angResTree->Branch("triggeredPhiDeg", &triggeredPhiDeg);
-  angResTree->Branch("triggeredThetaDeg", &triggeredThetaDeg);
+  // angResTree->Branch("triggeredPeak", &triggeredPeak);
+  // angResTree->Branch("triggeredPhiDeg", &triggeredPhiDeg);
+  // angResTree->Branch("triggeredThetaDeg", &triggeredThetaDeg);
 
   angResTree->Branch("zoomPeak", &zoomPeak);
   angResTree->Branch("zoomPhiDeg", &zoomPhiDeg);
@@ -203,24 +203,25 @@ int main(int argc, char *argv[])
 	
 	usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, thetaExpected, phiExpected);
 	phiExpected*=TMath::RadToDeg();
-	thetaExpected*=TMath::RadToDeg();
+	thetaExpected*=-1*TMath::RadToDeg();
 
 	cc->correlateEvent(usefulEvent, pol);
 
 	TH2D* hGlobalImageH = cc->makeGlobalImage(pol, globalPeak, globalPhiDeg, globalThetaDeg);
 
-	TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
-						       triggeredThetaDeg, l3TrigPatternH);
+	// TH2D* hTriggeredImageH = cc->makeTriggeredImage(pol, triggeredPeak, triggeredPhiDeg,
+	// 					       triggeredThetaDeg, l3TrigPatternH);
 
 	TH2D* hZoomedImageH = cc->makeZoomedImage(pol, zoomPeak, zoomPhiDeg,
 						 zoomThetaDeg, l3TrigPatternH,
-						 triggeredPhiDeg, triggeredThetaDeg);
+						 // triggeredPhiDeg, triggeredThetaDeg);
+						 globalPhiDeg, globalThetaDeg);	
 	
 	globalPhiDeg = globalPhiDeg < 0 ? globalPhiDeg + 360 : globalPhiDeg;
 	globalPhiDeg = globalPhiDeg >= 360 ? globalPhiDeg - 360 : globalPhiDeg;
 
-	triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
-	triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
+	// triggeredPhiDeg = triggeredPhiDeg < 0 ? triggeredPhiDeg + 360 : triggeredPhiDeg;
+	// triggeredPhiDeg = triggeredPhiDeg >= 360 ? triggeredPhiDeg - 360 : triggeredPhiDeg;
 
 	zoomPhiDeg = zoomPhiDeg < 0 ? zoomPhiDeg + 360 : zoomPhiDeg;
 	zoomPhiDeg = zoomPhiDeg >= 360 ? zoomPhiDeg - 360 : zoomPhiDeg;
@@ -235,7 +236,7 @@ int main(int argc, char *argv[])
 	  numSaved++;
 	}
 	else{
-	  delete hTriggeredImageH;
+	  // delete hTriggeredImageH;
 	  delete hGlobalImageH;
 	  delete hZoomedImageH;	  
 	}

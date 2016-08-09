@@ -186,7 +186,8 @@ int main(int argc, char *argv[])
 	// Interface in flux, let's hack our way through this...
 	cc->getNormalizedInterpolatedTGraphs(usefulEvent, AnitaPol::kVertical);  
 	cc->doFFTs(AnitaPol::kVertical);
-	cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, 0xffff);
+	// cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, 0xffff);
+	// cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, 0xffff);	
 	cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kVertical, 0xffff);
 
 

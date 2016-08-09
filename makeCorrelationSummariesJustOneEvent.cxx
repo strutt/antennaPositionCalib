@@ -139,8 +139,10 @@ int main(int argc, char *argv[])
     Double_t zoomPhiDeg = 0;
     Double_t zoomThetaDeg = 0;
 
-    cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPatternH);
-    const std::vector<Int_t>& combos = cc->combosToUseTriggered[l3TrigPatternH];
+    // cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPatternH);
+    cc->fillCombosToUse();
+    const int peakPhiSector = 0; // maybe?
+    const std::vector<Int_t>& combos = cc->combosToUseGlobal[peakPhiSector];
 
     for(auto& combo: combos){
 

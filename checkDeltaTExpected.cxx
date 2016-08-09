@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
   }
 
   CrossCorrelator* cc = new CrossCorrelator();
-  cc->kDebug = 1;
+  // cc->kDebug = 1;
   OutputConvention oc(argc, argv);
   TString outFileName = oc.getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
@@ -69,8 +69,13 @@ int main(int argc, char *argv[])
   Int_t ant1 = 1;
   Int_t ant2 = 2;
   
-  TH2D* hZoomed = cc->makeBlankZoomedImage("hTest", "Testing #deltat_{expected}",
-					   cc->phiArrayDeg[ant1].at(0), minus6Deg); 
+  // TH2D* hZoomed = cc->makeBlankZoomedImage("hTest", "Testing #deltat_{expected}",
+  // 					   cc->phiArrayDeg[ant1].at(0), minus6Deg);
+  
+  TH2D* hZoomed = cc->makeZoomedImage(pol, 0xffff, cc->phiArrayDeg[ant1].at(0), minus6Deg);
+  hZoomed->SetName("hTest");
+  hZoomed->SetTitle("Testing #deltat_{expected}");
+    
 
   for(int binx=1; binx<=hZoomed->GetNbinsX(); binx++){
     Double_t phiDeg = hZoomed->GetXaxis()->GetBinLowEdge(binx);

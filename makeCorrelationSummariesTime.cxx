@@ -28,6 +28,8 @@
 #include "CrossCorrelator.h"
 #include "OutputConvention.h"
 
+#include "assert.h"
+
 int main(int argc, char *argv[])
 {
 
@@ -183,7 +185,7 @@ int main(int argc, char *argv[])
 	thetaExpected*=TMath::RadToDeg();
 
 	cc->correlateEvent(usefulEvent, pol);
-	cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPatternH);
+	// cc->fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPatternH);
 	cc->doUpsampledCrossCorrelationsThreaded(pol, l3TrigPatternH);
 
 	for(int combo=0; combo<NUM_COMBOS; combo++){
@@ -195,7 +197,11 @@ int main(int argc, char *argv[])
 	  deltaTMeasuredClose[combo] = -999;	  
 	}
 	
-	const std::vector<Int_t>& combos = cc->combosToUseTriggered[l3TrigPatternH];  
+	// const std::vector<Int_t>& combos = cc->combosToUseTriggered[l3TrigPatternH];
+
+	assert(false); // if you want to resurect this program, you need to change the next line!!!
+	const int phiSector = 0; // Breaking this	
+	const std::vector<Int_t>& combos = cc->combosToUseGlobal[phiSector];
 
 	// std::cout << combos.size() << std::endl;
 	
